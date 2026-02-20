@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ResolvedPalette } from '../domain/palette';
 
 interface ProUnlockModalProps {
@@ -25,6 +25,7 @@ export function ProUnlockModal({
 }: ProUnlockModalProps) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaProvider>
       <SafeAreaView
         edges={['top']}
         style={[styles.container, { backgroundColor: palette.pageBackground }]}>
@@ -76,6 +77,7 @@ export function ProUnlockModal({
           <Text style={[styles.footnote, { color: palette.textTertiary }]}>Demo billing flow. Connect StoreKit products for live subscriptions.</Text>
         </ScrollView>
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

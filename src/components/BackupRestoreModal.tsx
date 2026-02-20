@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppState } from '../domain/types';
 import { ResolvedPalette } from '../domain/palette';
 import { parseImportedState } from '../lib/storage';
@@ -59,6 +59,7 @@ export function BackupRestoreModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaProvider>
       <SafeAreaView
         edges={['top']}
         style={[styles.container, { backgroundColor: palette.pageBackground }]}>
@@ -126,6 +127,7 @@ export function BackupRestoreModal({
           </View>
         )}
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
