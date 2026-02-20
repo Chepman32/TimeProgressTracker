@@ -93,8 +93,9 @@ export function buildInitialCountdowns(): CountdownItem[] {
 
 export function buildInitialState(): AppState {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     onboardingCompleted: false,
+    proUnlocked: false,
     settings: { ...DEFAULT_SETTINGS },
     countdowns: buildInitialCountdowns(),
   };

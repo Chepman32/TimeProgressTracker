@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppBackground } from './components/AppBackground';
 import { BottomTabBar } from './components/BottomTabBar';
+import { BackupRestoreModal } from './components/BackupRestoreModal';
+import { ProUnlockModal } from './components/ProUnlockModal';
 import { resolvePalette } from './domain/palette';
 import { AppTab, CountdownItem } from './domain/types';
 import { getThemeById } from './domain/themes';
@@ -12,6 +14,13 @@ import {
   useDebouncedNow,
   useSortedCountdowns,
 } from './hooks/useCountdownStore';
+import {
+  checkNotificationPermissions,
+  clearAllNotificationBadges,
+  fireDebugNotification,
+  requestNotificationPermissions,
+  syncLocalNotifications,
+} from './lib/notifications';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { TimelineScreen } from './screens/TimelineScreen';
@@ -30,6 +39,9 @@ export function AppRoot() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editorId, setEditorId] = useState<string | null>(null);
   const [isEditorOpen, setEditorOpen] = useState(false);
+  const [isProModalOpen, setProModalOpen] = useState(false);
+  const [isBackupModalOpen, setBackupModalOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const sortedCountdowns = useSortedCountdowns(state.countdowns);
   const detailItem = useCountdownById(sortedCountdowns, detailId);
@@ -43,6 +55,30 @@ export function AppRoot() {
   const baseTheme = getThemeById(sortedCountdowns[0]?.themeId ?? 'swiss');
   const accent = baseTheme.colors.accent;
 
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    checkNotificationPermissions()
+      .then(permissions => {
+        setNotificationsEnabled(Boolean(permissions.alert || permissions.sound));
+      })
+      .catch(() => {
+        setNotificationsEnabled(false);
+      });
+
+    clearAllNotificationBadges();
+  }, [isReady]);
+
+  useEffect(() => {
+    if (!isReady || !notificationsEnabled) {
+      return;
+    }
+
+    syncLocalNotifications(state.countdowns);
+  }, [isReady, notificationsEnabled, state.countdowns]);
+
   if (!isReady) {
     return (
       <View style={[styles.loading, { backgroundColor: palette.pageBackground }]}> 
@@ -50,6 +86,10 @@ export function AppRoot() {
       </View>
     );
   }
+
+  const requirePro = () => {
+    setProModalOpen(true);
+  };
 
   const openCreateModal = () => {
     setEditorId(null);
@@ -62,15 +102,21 @@ export function AppRoot() {
     setEditorOpen(true);
   };
 
-  const onSaveCountdown = (item: CountdownItem) => {
-    const exists = sortedCountdowns.some(countdown => countdown.id === item.id);
+  const onSaveCountdown = (item: CountdownItem): boolean => {
+    const theme = getThemeById(item.themeId);
+    if (theme.isPro && !state.proUnlocked) {
+      requirePro();
+      return false;
+    }
 
+    const exists = sortedCountdowns.some(countdown => countdown.id === item.id);
     if (exists) {
       actions.updateCountdown(item);
-      return;
+      return true;
     }
 
     actions.addCountdown(item);
+    return true;
   };
 
   const onDeleteCountdown = (id: string) => {
@@ -85,6 +131,17 @@ export function AppRoot() {
         },
       },
     ]);
+  };
+
+  const onRequestNotifications = async () => {
+    const granted = await requestNotificationPermissions();
+    setNotificationsEnabled(granted);
+    if (granted) {
+      syncLocalNotifications(state.countdowns);
+      Alert.alert('Notifications enabled', 'Countdown reminders are now active.');
+    } else {
+      Alert.alert('Notifications disabled', 'Enable notifications in iOS Settings for reminders.');
+    }
   };
 
   return (
@@ -111,7 +168,15 @@ export function AppRoot() {
               {activeTab === 'library' ? (
                 <LibraryScreen
                   palette={palette}
+                  proUnlocked={state.proUnlocked}
+                  onRequirePro={requirePro}
                   onUsePreset={preset => {
+                    const theme = getThemeById(preset.themeId);
+                    if (theme.isPro && !state.proUnlocked) {
+                      requirePro();
+                      return;
+                    }
+
                     const created = actions.addFromPreset(preset);
                     setActiveTab('dashboard');
                     setDetailId(created.id);
@@ -131,10 +196,16 @@ export function AppRoot() {
               {activeTab === 'settings' ? (
                 <SettingsScreen
                   settings={state.settings}
+                  proUnlocked={state.proUnlocked}
+                  notificationsEnabled={notificationsEnabled}
                   palette={palette}
                   accentColor={accent}
                   onUpdateSettings={actions.updateSettings}
                   onResetData={actions.resetState}
+                  onOpenBackup={() => setBackupModalOpen(true)}
+                  onOpenPro={requirePro}
+                  onRequestNotifications={onRequestNotifications}
+                  onSendTestNotification={fireDebugNotification}
                 />
               ) : null}
             </View>
@@ -154,6 +225,8 @@ export function AppRoot() {
           visible={isEditorOpen}
           palette={palette}
           countdown={editingItem}
+          proUnlocked={state.proUnlocked}
+          onRequirePro={requirePro}
           onClose={() => {
             setEditorOpen(false);
             setEditorId(null);
@@ -171,6 +244,27 @@ export function AppRoot() {
           onTogglePin={actions.togglePin}
           onToggleArchive={actions.toggleArchive}
           onDelete={onDeleteCountdown}
+        />
+
+        <BackupRestoreModal
+          visible={isBackupModalOpen}
+          palette={palette}
+          stateForExport={state}
+          onClose={() => setBackupModalOpen(false)}
+          onImportState={nextState => {
+            actions.importState(nextState);
+            setActiveTab('dashboard');
+          }}
+        />
+
+        <ProUnlockModal
+          visible={isProModalOpen}
+          palette={palette}
+          onClose={() => setProModalOpen(false)}
+          onUnlock={() => {
+            actions.setProUnlocked(true);
+            setProModalOpen(false);
+          }}
         />
       </SafeAreaView>
     </AppBackground>

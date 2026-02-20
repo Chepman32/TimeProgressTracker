@@ -46,6 +46,7 @@ export interface AppSettings {
 export interface AppState {
   schemaVersion: number;
   onboardingCompleted: boolean;
+  proUnlocked: boolean;
   settings: AppSettings;
   countdowns: CountdownItem[];
 }

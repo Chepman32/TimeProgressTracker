@@ -7,10 +7,17 @@ import { getThemeById } from '../domain/themes';
 
 interface LibraryScreenProps {
   palette: ResolvedPalette;
+  proUnlocked: boolean;
   onUsePreset: (preset: CountdownPreset) => void;
+  onRequirePro: () => void;
 }
 
-export function LibraryScreen({ palette, onUsePreset }: LibraryScreenProps) {
+export function LibraryScreen({
+  palette,
+  proUnlocked,
+  onUsePreset,
+  onRequirePro,
+}: LibraryScreenProps) {
   return (
     <ScrollView
       contentContainerStyle={styles.content}
@@ -25,6 +32,7 @@ export function LibraryScreen({ palette, onUsePreset }: LibraryScreenProps) {
       <View style={styles.grid}>
         {COUNTDOWN_PRESETS.map(preset => {
           const theme = getThemeById(preset.themeId);
+          const isLocked = theme.isPro && !proUnlocked;
           return (
             <Pressable
               key={preset.id}
@@ -36,7 +44,14 @@ export function LibraryScreen({ palette, onUsePreset }: LibraryScreenProps) {
                   borderRadius: theme.borderRadius,
                 },
               ]}
-              onPress={() => onUsePreset(preset)}>
+              onPress={() => {
+                if (isLocked) {
+                  onRequirePro();
+                  return;
+                }
+
+                onUsePreset(preset);
+              }}>
               <View style={styles.presetTopRow}>
                 <Text style={styles.presetIcon}>{preset.icon}</Text>
                 <Text
@@ -60,10 +75,12 @@ export function LibraryScreen({ palette, onUsePreset }: LibraryScreenProps) {
                 style={[
                   styles.useButton,
                   {
-                    backgroundColor: theme.colors.accent,
+                    backgroundColor: isLocked ? theme.colors.track : theme.colors.accent,
                   },
                 ]}>
-                <Text style={styles.useButtonText}>Use template</Text>
+                <Text style={styles.useButtonText}>
+                  {isLocked ? 'Unlock PRO' : 'Use template'}
+                </Text>
               </View>
             </Pressable>
           );

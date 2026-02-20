@@ -6,6 +6,7 @@ import { loadAppState, resetAppState, saveAppState } from '../lib/storage';
 type Action =
   | { type: 'hydrate'; payload: AppState }
   | { type: 'complete_onboarding' }
+  | { type: 'set_pro_unlocked'; payload: { value: boolean } }
   | { type: 'create'; payload: CountdownItem }
   | { type: 'update'; payload: CountdownItem }
   | { type: 'remove'; payload: { id: string } }
@@ -22,6 +23,11 @@ function countdownReducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         onboardingCompleted: true,
+      };
+    case 'set_pro_unlocked':
+      return {
+        ...state,
+        proUnlocked: action.payload.value,
       };
     case 'create':
       return {
@@ -90,6 +96,7 @@ export interface CountdownStore {
   state: AppState;
   actions: {
     completeOnboarding: () => void;
+    setProUnlocked: (value: boolean) => void;
     addCountdown: (item: CountdownItem) => void;
     updateCountdown: (item: CountdownItem) => void;
     addFromPreset: (preset: CountdownPreset) => CountdownItem;
@@ -137,6 +144,8 @@ export function useCountdownStore(): CountdownStore {
   const actions = useMemo(
     () => ({
       completeOnboarding: () => dispatch({ type: 'complete_onboarding' }),
+      setProUnlocked: (value: boolean) =>
+        dispatch({ type: 'set_pro_unlocked', payload: { value } }),
       addCountdown: (item: CountdownItem) => dispatch({ type: 'create', payload: item }),
       updateCountdown: (item: CountdownItem) => dispatch({ type: 'update', payload: item }),
       addFromPreset: (preset: CountdownPreset) => {

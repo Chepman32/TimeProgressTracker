@@ -2127,6 +2127,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-community/push-notification-ios@npm:^1.12.0":
+  version: 1.12.0
+  resolution: "@react-native-community/push-notification-ios@npm:1.12.0"
+  dependencies:
+    invariant: "npm:^2.2.4"
+  peerDependencies:
+    react: ">=16.6.3"
+    react-native: ">=0.58.4"
+  checksum: 10c0/7f6d375df05beeffe7fe2ba38bf30f9c3222760f691e5e4fd39bd6de504d0cdc844ea88fb522ec59248ed4a352b60d14522af9352f5399d9d1bd1f49cafd5605
+  languageName: node
+  linkType: hard
+
 "@react-native/assets-registry@npm:0.84.0":
   version: 0.84.0
   resolution: "@react-native/assets-registry@npm:0.84.0"
@@ -2724,6 +2736,7 @@ __metadata:
     "@react-native-community/cli-platform-android": "npm:20.1.0"
     "@react-native-community/cli-platform-ios": "npm:20.1.0"
     "@react-native-community/datetimepicker": "npm:^8.6.0"
+    "@react-native-community/push-notification-ios": "npm:^1.12.0"
     "@react-native/babel-preset": "npm:0.84.0"
     "@react-native/eslint-config": "npm:0.84.0"
     "@react-native/metro-config": "npm:0.84.0"
@@ -2738,6 +2751,7 @@ __metadata:
     prettier: "npm:2.8.8"
     react: "npm:19.2.3"
     react-native: "npm:0.84.0"
+    react-native-calendar-events: "npm:^2.2.0"
     react-native-safe-area-context: "npm:^5.5.2"
     react-native-svg: "npm:^15.15.3"
     react-test-renderer: "npm:19.2.3"
@@ -7575,6 +7589,15 @@ __metadata:
   version: 19.2.4
   resolution: "react-is@npm:19.2.4"
   checksum: 10c0/477a7cfc900f24194606e315fa353856a3a13487ea8eca841678817cad4daef64339ea0d1e84e58459fc75dbe0d9ba00bb0cc626db3d07e0cf31edc64cb4fa37
+  languageName: node
+  linkType: hard
+
+"react-native-calendar-events@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "react-native-calendar-events@npm:2.2.0"
+  peerDependencies:
+    react-native: ">=0.60.0"
+  checksum: 10c0/7b54c2f5485acff6b165252f4a6d31d2d5ad7c853f60deffc43c0c3acc8b90dd9846c3a2844ff2444b8695a99ecb97dc4cdec696ac616935141cd2b9c017337d
   languageName: node
   linkType: hard
 

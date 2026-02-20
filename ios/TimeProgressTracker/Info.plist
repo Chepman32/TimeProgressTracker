@@ -33,8 +33,14 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Pretty Progress imports your events so you can create countdowns from your calendar.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Pretty Progress imports your events so you can create countdowns from your calendar.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Pretty Progress can save countdown events into your calendar when enabled.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Pretty Progress uses notifications to remind you about countdown milestones.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

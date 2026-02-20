@@ -1,7 +1,7 @@
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { addDays } from 'date-fns';
+import { addDays, addHours } from 'date-fns';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ResolvedPalette } from '../domain/palette';
 import { createBlankCountdown } from '../domain/factories';
 import {
@@ -26,13 +27,17 @@ import { THEME_TEMPLATES } from '../domain/themes';
 import { formatFullDate, formatTime } from '../lib/date';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { ToggleRow } from '../components/ToggleRow';
+import { CalendarImportModal } from '../components/CalendarImportModal';
+import { CalendarImportEvent } from '../lib/calendar';
 
 interface CountdownEditorModalProps {
   visible: boolean;
   palette: ResolvedPalette;
   countdown?: CountdownItem;
+  proUnlocked: boolean;
+  onRequirePro: () => void;
   onClose: () => void;
-  onSave: (item: CountdownItem) => void;
+  onSave: (item: CountdownItem) => boolean;
 }
 
 type DateField = 'startDate' | 'targetDate';
@@ -60,6 +65,8 @@ export function CountdownEditorModal({
   visible,
   palette,
   countdown,
+  proUnlocked,
+  onRequirePro,
   onClose,
   onSave,
 }: CountdownEditorModalProps) {
@@ -67,6 +74,7 @@ export function CountdownEditorModal({
     countdown ? { ...countdown } : createBlankCountdown(),
   );
   const [pickerField, setPickerField] = useState<DateField | null>(null);
+  const [isCalendarImportOpen, setCalendarImportOpen] = useState(false);
 
   useEffect(() => {
     if (!visible) {
@@ -86,7 +94,29 @@ export function CountdownEditorModal({
   }, [draft, pickerField]);
 
   const setTheme = (themeId: ThemeId) => {
+    const theme = THEME_TEMPLATES.find(item => item.id === themeId);
+    if (theme?.isPro && !proUnlocked) {
+      onRequirePro();
+      return;
+    }
+
     setDraft(current => ({ ...current, themeId }));
+  };
+
+  const onImportCalendarEvent = (event: CalendarImportEvent) => {
+    const startDate = new Date(event.startDate);
+    const endDate = event.endDate ? new Date(event.endDate) : addHours(startDate, 1);
+    const normalizedEndDate =
+      endDate.getTime() > startDate.getTime() ? endDate : addHours(startDate, 1);
+
+    setDraft(current => ({
+      ...current,
+      title: event.title || current.title,
+      notes: event.notes || current.notes,
+      startDate: startDate.toISOString(),
+      targetDate: normalizedEndDate.toISOString(),
+      mode: 'countdown',
+    }));
   };
 
   const updateDate = (field: DateField, value: Date) => {
@@ -129,7 +159,7 @@ export function CountdownEditorModal({
     const nextTitle = draft.title.trim();
     const normalizedTitle = nextTitle.length > 0 ? nextTitle : 'Untitled countdown';
 
-    onSave({
+    const didSave = onSave({
       ...draft,
       title: normalizedTitle,
       updatedAt: now,
@@ -137,12 +167,18 @@ export function CountdownEditorModal({
       notes: draft.notes.trim(),
       icon: draft.icon.trim() || '⏳',
     });
-    onClose();
+
+    if (didSave) {
+      onClose();
+    }
   };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, { backgroundColor: palette.pageBackground }]}> 
+      <SafeAreaProvider>
+      <SafeAreaView
+        edges={['top']}
+        style={[styles.container, { backgroundColor: palette.pageBackground }]}>
         <View style={styles.header}>
           <Pressable onPress={onClose}>
             <Text style={[styles.headerAction, { color: palette.textSecondary }]}>Cancel</Text>
@@ -232,6 +268,16 @@ export function CountdownEditorModal({
             ]}>
             <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Dates & recurrence</Text>
             <Pressable
+              onPress={() => setCalendarImportOpen(true)}
+              style={[
+                styles.importCalendarButton,
+                { backgroundColor: palette.elevatedBackground, borderColor: palette.border },
+              ]}>
+              <Text style={[styles.importCalendarText, { color: palette.textPrimary }]}>
+                Import from Calendar
+              </Text>
+            </Pressable>
+            <Pressable
               onPress={() => setPickerField('startDate')}
               style={[
                 styles.pill,
@@ -276,6 +322,7 @@ export function CountdownEditorModal({
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.themeList}>
               {THEME_TEMPLATES.map(theme => {
                 const isSelected = draft.themeId === theme.id;
+                const isLocked = theme.isPro && !proUnlocked;
                 return (
                   <Pressable
                     key={theme.id}
@@ -295,7 +342,9 @@ export function CountdownEditorModal({
                       {theme.description}
                     </Text>
                     {theme.isPro ? (
-                      <Text style={[styles.proTag, { color: theme.colors.accent }]}>PRO</Text>
+                      <Text style={[styles.proTag, { color: theme.colors.accent }]}>
+                        {isLocked ? 'PRO • Locked' : 'PRO'}
+                      </Text>
                     ) : null}
                   </Pressable>
                 );
@@ -421,7 +470,15 @@ export function CountdownEditorModal({
             ) : null}
           </View>
         ) : null}
-      </View>
+
+        <CalendarImportModal
+          visible={isCalendarImportOpen}
+          palette={palette}
+          onClose={() => setCalendarImportOpen(false)}
+          onSelectEvent={onImportCalendarEvent}
+        />
+      </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -501,6 +558,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
     gap: 2,
+  },
+  importCalendarButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  importCalendarText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   pillLabel: {
     fontSize: 12,
