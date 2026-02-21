@@ -6,6 +6,7 @@ import { BottomTabBar } from './components/BottomTabBar';
 import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { ProUnlockModal } from './components/ProUnlockModal';
 import { resolvePalette } from './domain/palette';
+import { DEFAULT_FOLDER_ID } from './domain/folders';
 import { AppTab, CountdownItem } from './domain/types';
 import { getThemeById } from './domain/themes';
 import {
@@ -44,6 +45,10 @@ export function AppRoot() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const sortedCountdowns = useSortedCountdowns(state.countdowns);
+  const activeCountdowns = useMemo(
+    () => sortedCountdowns.filter(item => !item.trashedAt),
+    [sortedCountdowns],
+  );
   const detailItem = useCountdownById(sortedCountdowns, detailId);
   const editingItem = useCountdownById(sortedCountdowns, editorId);
 
@@ -52,7 +57,7 @@ export function AppRoot() {
     [state.settings.appearance, systemColorScheme],
   );
 
-  const baseTheme = getThemeById(sortedCountdowns[0]?.themeId ?? 'swiss');
+  const baseTheme = getThemeById(activeCountdowns[0]?.themeId ?? sortedCountdowns[0]?.themeId ?? 'swiss');
   const accent = baseTheme.colors.accent;
 
   useEffect(() => {
@@ -76,8 +81,8 @@ export function AppRoot() {
       return;
     }
 
-    syncLocalNotifications(state.countdowns);
-  }, [isReady, notificationsEnabled, state.countdowns]);
+    syncLocalNotifications(activeCountdowns);
+  }, [activeCountdowns, isReady, notificationsEnabled]);
 
   if (!isReady) {
     return (
@@ -120,13 +125,33 @@ export function AppRoot() {
   };
 
   const onDeleteCountdown = (id: string) => {
-    Alert.alert('Delete countdown?', 'This action cannot be undone.', [
+    const target = sortedCountdowns.find(countdown => countdown.id === id);
+    if (!target) {
+      return;
+    }
+
+    if (target.trashedAt) {
+      Alert.alert('Remove permanently?', 'This action cannot be undone.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            actions.removeCountdownPermanently(id);
+            setDetailId(null);
+          },
+        },
+      ]);
+      return;
+    }
+
+    Alert.alert('Move countdown to Trash?', 'You can recover it later from Trash.', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Move to Trash',
         style: 'destructive',
         onPress: () => {
-          actions.removeCountdown(id);
+          actions.moveCountdownToTrash(id);
           setDetailId(null);
         },
       },
@@ -137,7 +162,7 @@ export function AppRoot() {
     const granted = await requestNotificationPermissions();
     setNotificationsEnabled(granted);
     if (granted) {
-      syncLocalNotifications(state.countdowns);
+      syncLocalNotifications(activeCountdowns);
       Alert.alert('Notifications enabled', 'Countdown reminders are now active.');
     } else {
       Alert.alert('Notifications disabled', 'Enable notifications in iOS Settings for reminders.');
@@ -155,6 +180,7 @@ export function AppRoot() {
               {activeTab === 'dashboard' ? (
                 <DashboardScreen
                   countdowns={sortedCountdowns}
+                  folders={state.folders}
                   now={now}
                   weekStartsOnMonday={state.settings.weekStartsOnMonday}
                   defaultShowArchived={state.settings.showArchivedByDefault}
@@ -162,6 +188,14 @@ export function AppRoot() {
                   onCreate={openCreateModal}
                   onOpen={setDetailId}
                   onTogglePin={actions.togglePin}
+                  onRenameProject={actions.renameCountdown}
+                  onDuplicateProject={actions.duplicateCountdown}
+                  onMoveProjectToFolder={actions.moveCountdownToFolder}
+                  onMoveProjectToTrash={actions.moveCountdownToTrash}
+                  onRecoverProject={actions.recoverCountdown}
+                  onRemoveProjectPermanently={actions.removeCountdownPermanently}
+                  onRenameFolder={actions.renameFolder}
+                  onRemoveFolder={actions.removeFolder}
                 />
               ) : null}
 
@@ -186,7 +220,7 @@ export function AppRoot() {
 
               {activeTab === 'timeline' ? (
                 <TimelineScreen
-                  countdowns={sortedCountdowns}
+                  countdowns={activeCountdowns}
                   now={now}
                   palette={palette}
                   onOpen={setDetailId}
@@ -198,10 +232,12 @@ export function AppRoot() {
                   settings={state.settings}
                   proUnlocked={state.proUnlocked}
                   notificationsEnabled={notificationsEnabled}
+                  hasTrash={sortedCountdowns.some(item => Boolean(item.trashedAt))}
                   palette={palette}
                   accentColor={accent}
                   onUpdateSettings={actions.updateSettings}
                   onResetData={actions.resetState}
+                  onCleanTrash={actions.cleanTrash}
                   onOpenBackup={() => setBackupModalOpen(true)}
                   onOpenPro={requirePro}
                   onRequestNotifications={onRequestNotifications}
@@ -224,6 +260,7 @@ export function AppRoot() {
         <CountdownEditorModal
           visible={isEditorOpen}
           palette={palette}
+          defaultFolderId={state.folders[0]?.id ?? DEFAULT_FOLDER_ID}
           countdown={editingItem}
           proUnlocked={state.proUnlocked}
           onRequirePro={requirePro}

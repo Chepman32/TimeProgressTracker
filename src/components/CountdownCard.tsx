@@ -18,6 +18,8 @@ interface CountdownCardProps {
   theme: ThemeTemplate;
   index: number;
   onPress: () => void;
+  onLongPress?: () => void;
+  showPinButton?: boolean;
   onTogglePin: () => void;
 }
 
@@ -27,6 +29,8 @@ export function CountdownCard({
   theme,
   index,
   onPress,
+  onLongPress,
+  showPinButton = true,
   onTogglePin,
 }: CountdownCardProps) {
   const entrance = useRef(new Animated.Value(0)).current;
@@ -97,6 +101,8 @@ export function CountdownCard({
       ]}>
       <Pressable
         onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={300}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         style={styles.pressable}>
@@ -112,13 +118,15 @@ export function CountdownCard({
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.pinButton, { borderColor: theme.colors.track }]}
-            onPress={onTogglePin}>
-            <Text style={[styles.pinSymbol, pinSymbolStyle]}>
-              {item.pinned ? '★' : '☆'}
-            </Text>
-          </TouchableOpacity>
+          {showPinButton ? (
+            <TouchableOpacity
+              style={[styles.pinButton, { borderColor: theme.colors.track }]}
+              onPress={onTogglePin}>
+              <Text style={[styles.pinSymbol, pinSymbolStyle]}>
+                {item.pinned ? '★' : '☆'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.progressSection}>

@@ -9,10 +9,12 @@ interface SettingsScreenProps {
   settings: AppSettings;
   proUnlocked: boolean;
   notificationsEnabled: boolean;
+  hasTrash: boolean;
   palette: ResolvedPalette;
   accentColor: string;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
   onResetData: () => Promise<void>;
+  onCleanTrash: () => void;
   onOpenBackup: () => void;
   onOpenPro: () => void;
   onRequestNotifications: () => void;
@@ -29,10 +31,12 @@ export function SettingsScreen({
   settings,
   proUnlocked,
   notificationsEnabled,
+  hasTrash,
   palette,
   accentColor,
   onUpdateSettings,
   onResetData,
+  onCleanTrash,
   onOpenBackup,
   onOpenPro,
   onRequestNotifications,
@@ -47,6 +51,22 @@ export function SettingsScreen({
         onPress: () => {
           onResetData().catch(() => {});
         },
+      },
+    ]);
+  };
+
+  const onPressCleanTrash = () => {
+    if (!hasTrash) {
+      Alert.alert('Trash is empty');
+      return;
+    }
+
+    Alert.alert('Clean Trash?', 'All projects in Trash will be removed permanently.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clean',
+        style: 'destructive',
+        onPress: onCleanTrash,
       },
     ]);
   };
@@ -156,6 +176,11 @@ export function SettingsScreen({
           <Text style={[styles.secondaryButtonText, { color: palette.textPrimary }]}>
             Backup / Restore JSON
           </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.resetButton, { borderColor: palette.destructive }]}
+          onPress={onPressCleanTrash}>
+          <Text style={[styles.resetText, { color: palette.destructive }]}>Clean Trash</Text>
         </Pressable>
         <Pressable
           style={[styles.resetButton, { borderColor: palette.destructive }]}

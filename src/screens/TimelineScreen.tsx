@@ -21,7 +21,7 @@ export function TimelineScreen({
 }: TimelineScreenProps) {
   const upcoming = useMemo(() => {
     return countdowns
-      .filter(item => !item.archived)
+      .filter(item => !item.archived && !item.trashedAt)
       .map(item => {
         const metrics = calculateCountdownMetrics(item, now);
         return {

@@ -9,6 +9,7 @@ import {
   ThemeId,
 } from './types';
 import { createId } from '../lib/id';
+import { createDefaultFolder, DEFAULT_FOLDER_ID } from './folders';
 
 export const DEFAULT_NOTIFICATIONS: NotificationSettings = {
   weekBefore: true,
@@ -33,6 +34,7 @@ function toIso(date: Date): string {
 export function createCountdownFromPreset(
   preset: CountdownPreset,
   nowDate = new Date(),
+  folderId = DEFAULT_FOLDER_ID,
 ): CountdownItem {
   const targetDate = addDays(nowDate, preset.defaultDurationDays);
   const startDate = preset.mode === 'countup' ? subDays(nowDate, 30) : nowDate;
@@ -50,13 +52,19 @@ export function createCountdownFromPreset(
     progressVisual: preset.progressVisual,
     pinned: false,
     archived: false,
+    folderId,
+    trashedAt: null,
+    previousFolderId: null,
     createdAt: toIso(nowDate),
     updatedAt: toIso(nowDate),
     notifications: { ...DEFAULT_NOTIFICATIONS },
   };
 }
 
-export function createBlankCountdown(themeId: ThemeId = 'swiss'): CountdownItem {
+export function createBlankCountdown(
+  themeId: ThemeId = 'swiss',
+  folderId = DEFAULT_FOLDER_ID,
+): CountdownItem {
   const startDate = new Date();
   const targetDate = addDays(startDate, 30);
 
@@ -73,6 +81,9 @@ export function createBlankCountdown(themeId: ThemeId = 'swiss'): CountdownItem 
     progressVisual: 'bar',
     pinned: false,
     archived: false,
+    folderId,
+    trashedAt: null,
+    previousFolderId: null,
     createdAt: toIso(startDate),
     updatedAt: toIso(startDate),
     notifications: { ...DEFAULT_NOTIFICATIONS },
@@ -93,10 +104,11 @@ export function buildInitialCountdowns(): CountdownItem[] {
 
 export function buildInitialState(): AppState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     onboardingCompleted: false,
     proUnlocked: false,
     settings: { ...DEFAULT_SETTINGS },
+    folders: [createDefaultFolder(now)],
     countdowns: buildInitialCountdowns(),
   };
 }

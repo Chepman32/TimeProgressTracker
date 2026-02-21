@@ -162,16 +162,20 @@ export function CountdownDetailModal({
             </View>
 
             <View style={styles.actions}>
-              <Pressable
-                style={[styles.actionButton, { backgroundColor: palette.elevatedBackground, borderColor: palette.border }]}
-                onPress={() => onTogglePin(item.id)}>
-                <Text style={[styles.actionText, { color: palette.textPrimary }]}>{item.pinned ? 'Unpin' : 'Pin'}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionButton, { backgroundColor: palette.elevatedBackground, borderColor: palette.border }]}
-                onPress={() => onToggleArchive(item.id)}>
-                <Text style={[styles.actionText, { color: palette.textPrimary }]}>{item.archived ? 'Unarchive' : 'Archive'}</Text>
-              </Pressable>
+              {!item.trashedAt ? (
+                <Pressable
+                  style={[styles.actionButton, { backgroundColor: palette.elevatedBackground, borderColor: palette.border }]}
+                  onPress={() => onTogglePin(item.id)}>
+                  <Text style={[styles.actionText, { color: palette.textPrimary }]}>{item.pinned ? 'Unpin' : 'Pin'}</Text>
+                </Pressable>
+              ) : null}
+              {!item.trashedAt ? (
+                <Pressable
+                  style={[styles.actionButton, { backgroundColor: palette.elevatedBackground, borderColor: palette.border }]}
+                  onPress={() => onToggleArchive(item.id)}>
+                  <Text style={[styles.actionText, { color: palette.textPrimary }]}>{item.archived ? 'Unarchive' : 'Archive'}</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 style={[
                   styles.actionButton,
@@ -179,7 +183,9 @@ export function CountdownDetailModal({
                   { borderColor: palette.destructive },
                 ]}
                 onPress={() => onDelete(item.id)}>
-                <Text style={[styles.actionText, { color: palette.destructive }]}>Delete</Text>
+                <Text style={[styles.actionText, { color: palette.destructive }]}>
+                  {item.trashedAt ? 'Remove permanently' : 'Move to Trash'}
+                </Text>
               </Pressable>
             </View>
           </ScrollView>

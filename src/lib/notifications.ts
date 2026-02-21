@@ -83,7 +83,7 @@ function nextRecurringMilestone(item: CountdownItem, now: Date): Date | null {
 }
 
 function requestsForCountdown(item: CountdownItem, now: Date): ScheduledRequest[] {
-  if (item.archived) {
+  if (item.archived || item.trashedAt) {
     return [];
   }
 

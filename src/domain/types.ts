@@ -31,9 +31,19 @@ export interface CountdownItem {
   accentColor?: string;
   pinned: boolean;
   archived: boolean;
+  folderId: string;
+  trashedAt: string | null;
+  previousFolderId: string | null;
   createdAt: string;
   updatedAt: string;
   notifications: NotificationSettings;
+}
+
+export interface ProjectFolder {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AppSettings {
@@ -48,6 +58,7 @@ export interface AppState {
   onboardingCompleted: boolean;
   proUnlocked: boolean;
   settings: AppSettings;
+  folders: ProjectFolder[];
   countdowns: CountdownItem[];
 }
 

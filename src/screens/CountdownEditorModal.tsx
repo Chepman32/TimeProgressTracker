@@ -33,6 +33,7 @@ import { CalendarImportEvent } from '../lib/calendar';
 interface CountdownEditorModalProps {
   visible: boolean;
   palette: ResolvedPalette;
+  defaultFolderId: string;
   countdown?: CountdownItem;
   proUnlocked: boolean;
   onRequirePro: () => void;
@@ -64,6 +65,7 @@ const VISUAL_OPTIONS: Array<{ label: string; value: ProgressVisual }> = [
 export function CountdownEditorModal({
   visible,
   palette,
+  defaultFolderId,
   countdown,
   proUnlocked,
   onRequirePro,
@@ -71,7 +73,7 @@ export function CountdownEditorModal({
   onSave,
 }: CountdownEditorModalProps) {
   const [draft, setDraft] = useState<CountdownItem>(() =>
-    countdown ? { ...countdown } : createBlankCountdown(),
+    countdown ? { ...countdown } : createBlankCountdown('swiss', defaultFolderId),
   );
   const [pickerField, setPickerField] = useState<DateField | null>(null);
   const [isCalendarImportOpen, setCalendarImportOpen] = useState(false);
@@ -81,9 +83,9 @@ export function CountdownEditorModal({
       return;
     }
 
-    setDraft(countdown ? { ...countdown } : createBlankCountdown());
+    setDraft(countdown ? { ...countdown } : createBlankCountdown('swiss', defaultFolderId));
     setPickerField(null);
-  }, [countdown, visible]);
+  }, [countdown, defaultFolderId, visible]);
 
   const activeDateValue = useMemo(() => {
     if (!pickerField) {
