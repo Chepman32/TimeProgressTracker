@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
+  Easing,
+  GestureResponderEvent,
   Modal,
   Pressable,
   ScrollView,
@@ -32,6 +34,7 @@ export function DotGridModal({ visible, item, now, palette, onClose }: DotGridMo
   const modalOpacity = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const isClosing = useRef(false);
+  const gesture = useRef({ startY: 0, lastY: 0, lastTime: 0, vy: 0 });
 
   const closeWithAnimation = useCallback(() => {
     if (isClosing.current) return;
@@ -62,6 +65,41 @@ export function DotGridModal({ visible, item, now, palette, onClose }: DotGridMo
       onClose();
     });
   }, [backdropOpacity, modalOpacity, onClose, scale, translateY]);
+
+  const closeWithAnimationRef = useRef(closeWithAnimation);
+  useEffect(() => {
+    closeWithAnimationRef.current = closeWithAnimation;
+  }, [closeWithAnimation]);
+
+  const swipeHandlers = useRef({
+    onStartShouldSetResponder: () => true,
+    onResponderGrant: (e: GestureResponderEvent) => {
+      const y = e.nativeEvent.pageY;
+      gesture.current = { startY: y, lastY: y, lastTime: Date.now(), vy: 0 };
+    },
+    onResponderMove: (e: GestureResponderEvent) => {
+      const now = Date.now();
+      const y = e.nativeEvent.pageY;
+      const dy = y - gesture.current.startY;
+      const dt = now - gesture.current.lastTime;
+      if (dt > 0) gesture.current.vy = (y - gesture.current.lastY) / dt;
+      gesture.current.lastY = y;
+      gesture.current.lastTime = now;
+      if (dy > 0) translateY.setValue(dy);
+    },
+    onResponderRelease: () => {
+      const dy = gesture.current.lastY - gesture.current.startY;
+      const vy = gesture.current.vy;
+      if (dy > 70 || vy > 0.5) {
+        closeWithAnimationRef.current();
+      } else {
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 80, friction: 12 }).start();
+      }
+    },
+    onResponderTerminate: () => {
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 80, friction: 12 }).start();
+    },
+  });
 
   useEffect(() => {
     if (!visible) {
@@ -124,7 +162,9 @@ export function DotGridModal({ visible, item, now, palette, onClose }: DotGridMo
               transform: [{ translateY }, { scale }],
             },
           ]}>
-          <View style={[styles.swipeHandle, { backgroundColor: palette.textSecondary }]} />
+          <View style={styles.swipeArea} {...swipeHandlers.current}>
+            <View style={[styles.swipeHandle, { backgroundColor: palette.textSecondary }]} />
+          </View>
 
           <View style={styles.header}>
             <Text style={[styles.title, { color: palette.textPrimary }]} numberOfLines={1}>
@@ -166,13 +206,12 @@ function DotGrid({ totalDays, elapsedDays, accent }: DotGridProps) {
 
   useEffect(() => {
     const animations = dotAnims.map((anim, i) =>
-      Animated.spring(anim, {
+      Animated.timing(anim, {
         toValue: 1,
         useNativeDriver: true,
-        delay: Math.min(i * 7, 600),
-        velocity: i < elapsedDays ? 3 : 1,
-        tension: i < elapsedDays ? 160 : 90,
-        friction: i < elapsedDays ? 10 : 14,
+        delay: Math.min(i * 18, 1800),
+        duration: i < elapsedDays ? 320 : 280,
+        easing: i < elapsedDays ? Easing.out(Easing.cubic) : Easing.out(Easing.quad),
       }),
     );
     Animated.parallel(animations).start();
@@ -228,12 +267,15 @@ const styles = StyleSheet.create({
     shadowRadius: 26,
     elevation: 30,
   },
+  swipeArea: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
   swipeHandle: {
     width: 48,
     height: 5,
     borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 16,
     opacity: 0.35,
   },
   header: {

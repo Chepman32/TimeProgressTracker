@@ -91,9 +91,16 @@ export function createBlankCountdown(
 }
 
 export function buildInitialCountdowns(): CountdownItem[] {
+  const sobrietyPreset = COUNTDOWN_PRESETS[1];
+  const sobrietyMock = createCountdownFromPreset(sobrietyPreset, now);
+  const sobrietyElapsedDays = Math.round(sobrietyPreset.defaultDurationDays * 1.5);
+
   return [
     createCountdownFromPreset(COUNTDOWN_PRESETS[0], now),
-    createCountdownFromPreset(COUNTDOWN_PRESETS[1], now),
+    {
+      ...sobrietyMock,
+      startDate: toIso(subDays(now, sobrietyElapsedDays)),
+    },
     createCountdownFromPreset(COUNTDOWN_PRESETS[6], now),
     createCountdownFromPreset(COUNTDOWN_PRESETS[5], now),
   ].map((item, index) => ({

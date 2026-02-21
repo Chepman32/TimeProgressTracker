@@ -111,6 +111,39 @@ function normalizeCountdowns(
   });
 }
 
+function migrateMockSobrietyProgress(countdowns: CountdownItem[], previousSchemaVersion?: number): CountdownItem[] {
+  if ((previousSchemaVersion ?? 0) >= 4) {
+    return countdowns;
+  }
+
+  const nowMs = Date.now();
+
+  return countdowns.map(item => {
+    const isLegacyMockSobriety =
+      item.title === 'Sobriety Streak' &&
+      item.mode === 'countup' &&
+      item.notes === 'Stay focused day by day.';
+    if (!isLegacyMockSobriety) {
+      return item;
+    }
+
+    const startMs = new Date(item.startDate).getTime();
+    const targetMs = new Date(item.targetDate).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(targetMs) || targetMs <= nowMs) {
+      return item;
+    }
+
+    const remainingMs = targetMs - nowMs;
+    const desiredStartMs = nowMs - remainingMs * 1.5; // 60% elapsed => elapsed:remaining = 3:2
+
+    return {
+      ...item,
+      startDate: new Date(desiredStartMs).toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+}
+
 function migrateAppState(rawState: unknown): AppState {
   if (!isValidAppState(rawState)) {
     return buildInitialState();
@@ -127,14 +160,18 @@ function migrateAppState(rawState: unknown): AppState {
     fallbackFolderId,
     fallback.countdowns,
   );
+  const migratedCountdowns = migrateMockSobrietyProgress(
+    countdowns,
+    typeof next.schemaVersion === 'number' ? next.schemaVersion : 0,
+  );
 
   return {
     ...fallback,
     ...next,
-    schemaVersion: 3,
+    schemaVersion: 4,
     proUnlocked: typeof next.proUnlocked === 'boolean' ? next.proUnlocked : false,
     folders,
-    countdowns,
+    countdowns: migratedCountdowns,
     settings: {
       ...fallback.settings,
       ...(next.settings ?? {}),
