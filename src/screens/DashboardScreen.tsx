@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
@@ -61,6 +61,11 @@ interface FolderSection {
   isSystem: boolean;
 }
 
+interface PendingPinFocus {
+  itemKey: string;
+  anchorWindowY: number;
+}
+
 const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
   { value: 'active', label: 'Active' },
   { value: 'all', label: 'All' },
@@ -97,12 +102,12 @@ export function DashboardScreen({
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     [ALL_PROJECTS_FOLDER_ID]: true,
   });
-  const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(null);
+  const [pendingPinFocus, setPendingPinFocus] = useState<PendingPinFocus | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const scrollOffsetYRef = useRef(0);
   const viewportHeightRef = useRef(0);
   const contentHeightRef = useRef(0);
-  const itemLayoutsRef = useRef<Record<string, { y: number; height: number }>>({});
+  const itemRefsRef = useRef<Record<string, View | null>>({});
 
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -260,49 +265,42 @@ export function DashboardScreen({
     });
   }, [folders, hasTrash]);
 
-  const focusReorderedItem = useCallback((itemKey: string) => {
-    const scroll = scrollRef.current;
-    const layout = itemLayoutsRef.current[itemKey];
-    const viewportHeight = viewportHeightRef.current;
-    if (!scroll || !layout || viewportHeight <= 0) {
-      return false;
-    }
-
-    const currentOffsetY = scrollOffsetYRef.current;
-    const visibilityPadding = 24;
-    const itemTop = layout.y;
-    const itemBottom = layout.y + layout.height;
-    const visibleTop = currentOffsetY + visibilityPadding;
-    const visibleBottom = currentOffsetY + viewportHeight - visibilityPadding;
-    const itemFullyVisible = itemTop >= visibleTop && itemBottom <= visibleBottom;
-    if (itemFullyVisible) {
-      return true;
-    }
-
-    const centeredOffsetY = itemTop - (viewportHeight - layout.height) / 2;
-    const maxOffsetY = Math.max(contentHeightRef.current - viewportHeight, 0);
-    const targetOffsetY = Math.min(Math.max(centeredOffsetY, 0), maxOffsetY);
-
-    scroll.scrollTo({ y: targetOffsetY, animated: true });
-    scrollOffsetYRef.current = targetOffsetY;
-    return true;
-  }, []);
-
   useEffect(() => {
-    if (!pendingFocusKey) {
+    if (!pendingPinFocus) {
       return;
     }
 
     const animationFrame = requestAnimationFrame(() => {
-      if (focusReorderedItem(pendingFocusKey)) {
-        setPendingFocusKey(null);
+      const itemRef = itemRefsRef.current[pendingPinFocus.itemKey];
+      const scroll = scrollRef.current;
+      const viewportHeight = viewportHeightRef.current;
+      if (!itemRef || !scroll || viewportHeight <= 0) {
+        setPendingPinFocus(null);
+        return;
       }
+
+      itemRef.measureInWindow((_x, nextWindowY) => {
+        const deltaY = nextWindowY - pendingPinFocus.anchorWindowY;
+        if (Math.abs(deltaY) < 1) {
+          setPendingPinFocus(null);
+          return;
+        }
+
+        const maxOffsetY = Math.max(contentHeightRef.current - viewportHeight, 0);
+        const nextOffsetY = Math.min(
+          Math.max(scrollOffsetYRef.current + deltaY, 0),
+          maxOffsetY,
+        );
+        scroll.scrollTo({ y: nextOffsetY, animated: true });
+        scrollOffsetYRef.current = nextOffsetY;
+        setPendingPinFocus(null);
+      });
     });
 
     return () => {
       cancelAnimationFrame(animationFrame);
     };
-  }, [focusReorderedItem, pendingFocusKey, sections]);
+  }, [pendingPinFocus, sections]);
 
   const handleProjectAction = (actionId: string, item: CountdownItem) => {
     if (actionId === 'recover') {
@@ -510,7 +508,13 @@ export function DashboardScreen({
   };
 
   const onTogglePinWithAnimation = (sectionId: string, id: string) => {
-    setPendingFocusKey(`${sectionId}-${id}`);
+    const itemKey = `${sectionId}-${id}`;
+    const itemRef = itemRefsRef.current[itemKey];
+    if (itemRef) {
+      itemRef.measureInWindow((_x, anchorWindowY) => {
+        setPendingPinFocus({ itemKey, anchorWindowY });
+      });
+    }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onTogglePin(id);
   };
@@ -763,11 +767,12 @@ export function DashboardScreen({
                         return (
                           <View
                             key={itemKey}
-                            onLayout={event => {
-                              itemLayoutsRef.current[itemKey] = {
-                                y: event.nativeEvent.layout.y,
-                                height: event.nativeEvent.layout.height,
-                              };
+                            ref={node => {
+                              if (node) {
+                                itemRefsRef.current[itemKey] = node;
+                                return;
+                              }
+                              delete itemRefsRef.current[itemKey];
                             }}>
                             <CountdownCard
                               item={item}
