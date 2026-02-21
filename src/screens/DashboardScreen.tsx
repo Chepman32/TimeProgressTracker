@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
 import { ResolvedPalette } from '../domain/palette';
@@ -86,6 +88,18 @@ export function DashboardScreen({
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     [ALL_PROJECTS_FOLDER_ID]: true,
   });
+  const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const scrollOffsetYRef = useRef(0);
+  const viewportHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
+  const itemLayoutsRef = useRef<Record<string, { y: number; height: number }>>({});
+
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -202,6 +216,50 @@ export function DashboardScreen({
     });
   }, [folders, hasTrash]);
 
+  const focusReorderedItem = useCallback((itemKey: string) => {
+    const scroll = scrollRef.current;
+    const layout = itemLayoutsRef.current[itemKey];
+    const viewportHeight = viewportHeightRef.current;
+    if (!scroll || !layout || viewportHeight <= 0) {
+      return false;
+    }
+
+    const currentOffsetY = scrollOffsetYRef.current;
+    const visibilityPadding = 24;
+    const itemTop = layout.y;
+    const itemBottom = layout.y + layout.height;
+    const visibleTop = currentOffsetY + visibilityPadding;
+    const visibleBottom = currentOffsetY + viewportHeight - visibilityPadding;
+    const itemFullyVisible = itemTop >= visibleTop && itemBottom <= visibleBottom;
+    if (itemFullyVisible) {
+      return true;
+    }
+
+    const centeredOffsetY = itemTop - (viewportHeight - layout.height) / 2;
+    const maxOffsetY = Math.max(contentHeightRef.current - viewportHeight, 0);
+    const targetOffsetY = Math.min(Math.max(centeredOffsetY, 0), maxOffsetY);
+
+    scroll.scrollTo({ y: targetOffsetY, animated: true });
+    scrollOffsetYRef.current = targetOffsetY;
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (!pendingFocusKey) {
+      return;
+    }
+
+    const animationFrame = requestAnimationFrame(() => {
+      if (focusReorderedItem(pendingFocusKey)) {
+        setPendingFocusKey(null);
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [focusReorderedItem, pendingFocusKey, sections]);
+
   const promptForText = (
     title: string,
     message: string,
@@ -219,7 +277,7 @@ export function DashboardScreen({
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Save',
-          onPress: value => {
+          onPress: (value?: string) => {
             if (typeof value !== 'string') {
               return;
             }
@@ -399,7 +457,7 @@ export function DashboardScreen({
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Create',
-          onPress: value => {
+          onPress: (value?: string) => {
             if (typeof value !== 'string') {
               return;
             }
@@ -418,8 +476,27 @@ export function DashboardScreen({
     );
   };
 
+  const onTogglePinWithAnimation = (sectionId: string, id: string) => {
+    setPendingFocusKey(`${sectionId}-${id}`);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    onTogglePin(id);
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={event => {
+        scrollOffsetYRef.current = event.nativeEvent.contentOffset.y;
+      }}
+      onLayout={event => {
+        viewportHeightRef.current = event.nativeEvent.layout.height;
+      }}
+      onContentSizeChange={(_, contentHeight) => {
+        contentHeightRef.current = contentHeight;
+      }}>
       <View style={styles.headerStack}>
         <View style={styles.headerRow}>
           <View style={styles.headerTitleWrap}>
@@ -572,18 +649,27 @@ export function DashboardScreen({
                         const metrics = calculateCountdownMetrics(item, now);
                         const theme = getThemeById(item.themeId);
 
+                        const itemKey = `${section.id}-${item.id}`;
                         return (
-                          <CountdownCard
-                            key={`${section.id}-${item.id}`}
-                            item={item}
-                            metrics={metrics}
-                            theme={theme}
-                            index={index}
-                            onPress={() => onOpen(item.id)}
-                            onLongPress={() => onLongPressProject(item)}
-                            showPinButton={!item.trashedAt}
-                            onTogglePin={() => onTogglePin(item.id)}
-                          />
+                          <View
+                            key={itemKey}
+                            onLayout={event => {
+                              itemLayoutsRef.current[itemKey] = {
+                                y: event.nativeEvent.layout.y,
+                                height: event.nativeEvent.layout.height,
+                              };
+                            }}>
+                            <CountdownCard
+                              item={item}
+                              metrics={metrics}
+                              theme={theme}
+                              index={index}
+                              onPress={() => onOpen(item.id)}
+                              onLongPress={() => onLongPressProject(item)}
+                              showPinButton={!item.trashedAt}
+                              onTogglePin={() => onTogglePinWithAnimation(section.id, item.id)}
+                            />
+                          </View>
                         );
                       })}
                     </View>
