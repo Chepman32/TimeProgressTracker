@@ -88,27 +88,28 @@ export function SegmentedControl<T extends string>({
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderRadius: 14,
-    padding: 4,
+    borderRadius: 18,
+    padding: 5,
     flexDirection: 'row',
     position: 'relative',
   },
   active: {
     position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 4,
-    borderRadius: 10,
+    top: 5,
+    bottom: 5,
+    left: 5,
+    borderRadius: 13,
   },
   segment: {
     flex: 1,
-    paddingVertical: 9,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
   },
   text: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
