@@ -25,7 +25,7 @@ import { calculateCountdownMetrics, formatDurationShort, getPeriodProgress } fro
 import { CountdownCard } from '../components/CountdownCard';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { ProgressRing } from '../components/ProgressRing';
-import { MenuView } from '@react-native-menu/menu';
+import { MenuView, MenuAction } from '@react-native-menu/menu';
 import { isSameDay, endOfWeek, endOfMonth } from 'date-fns';
 
 interface DashboardScreenProps {
@@ -302,40 +302,39 @@ export function DashboardScreen({
     };
   }, [focusReorderedItem, pendingFocusKey, sections]);
 
-  const promptForText = (
-    title: string,
-    message: string,
-    currentValue: string,
-    onSubmit: (value: string) => void,
-  ) => {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
-
-    Alert.prompt(
-      title,
-      message,
-      [
+  const handleProjectAction = (actionId: string, item: CountdownItem) => {
+    if (actionId === 'recover') {
+      onRecoverProject(item.id);
+    } else if (actionId === 'remove-permanently') {
+      Alert.alert('Remove permanently?', 'This project will be deleted forever.', [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: (value?: string) => {
-            if (typeof value !== 'string') {
-              return;
-            }
-
-            const next = value.trim();
-            if (!next) {
-              return;
-            }
-
-            onSubmit(next);
+        { text: 'Remove', style: 'destructive', onPress: () => onRemoveProjectPermanently(item.id) },
+      ]);
+    } else if (actionId === 'rename') {
+      Alert.prompt(
+        'Rename project',
+        'Set a new project name.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save',
+            onPress: (value?: string) => {
+              const next = value?.trim();
+              if (next) { onRenameProject(item.id, next); }
+            },
           },
-        },
-      ],
-      'plain-text',
-      currentValue,
-    );
+        ],
+        'plain-text',
+        item.title,
+      );
+    } else if (actionId === 'duplicate') {
+      onDuplicateProject(item.id);
+    } else if (actionId === 'remove') {
+      onMoveProjectToTrash(item.id);
+    } else if (actionId.startsWith('move-')) {
+      const folderId = actionId.slice(5);
+      onMoveProjectToFolder(item.id, folderId);
+    }
   };
 
   const onRequestMoveToFolder = (project: CountdownItem) => {
@@ -366,7 +365,7 @@ export function DashboardScreen({
           return;
         }
 
-        onMoveProjectToFolder(project.id, target.id);
+        handleProjectAction(`move-${target.id}`, project);
       },
     );
   };
@@ -386,22 +385,11 @@ export function DashboardScreen({
         },
         selectedIndex => {
           if (selectedIndex === 0) {
-            onRecoverProject(project.id);
+            handleProjectAction('recover', project);
           }
 
           if (selectedIndex === 1) {
-            Alert.alert(
-              'Remove permanently?',
-              'This project will be deleted forever.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Remove',
-                  style: 'destructive',
-                  onPress: () => onRemoveProjectPermanently(project.id),
-                },
-              ],
-            );
+            handleProjectAction('remove-permanently', project);
           }
         },
       );
@@ -411,19 +399,17 @@ export function DashboardScreen({
     ActionSheetIOS.showActionSheetWithOptions(
       {
         title: project.title,
-        options: ['Rename', 'Duplicate', 'Move to folder', 'Remove', 'Cancel'],
+        options: ['Rename', 'Duplicate', 'Move to Folder', 'Move to Trash', 'Cancel'],
         cancelButtonIndex: 4,
         destructiveButtonIndex: 3,
       },
       selectedIndex => {
         if (selectedIndex === 0) {
-          promptForText('Rename project', 'Set a new project name.', project.title, value => {
-            onRenameProject(project.id, value);
-          });
+          handleProjectAction('rename', project);
         }
 
         if (selectedIndex === 1) {
-          onDuplicateProject(project.id);
+          handleProjectAction('duplicate', project);
         }
 
         if (selectedIndex === 2) {
@@ -431,59 +417,54 @@ export function DashboardScreen({
         }
 
         if (selectedIndex === 3) {
-          Alert.alert('Move to Trash?', 'You can recover it later from Trash.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Move to Trash',
-              style: 'destructive',
-              onPress: () => onMoveProjectToTrash(project.id),
-            },
-          ]);
+          handleProjectAction('remove', project);
         }
       },
     );
   };
 
-  const onLongPressFolder = (folder: ProjectFolder) => {
-    if (Platform.OS !== 'ios') {
-      return;
+  const buildFolderActions = (): MenuAction[] => [
+    { id: 'rename-folder', title: 'Rename', image: 'pencil' },
+    { id: 'remove-folder', title: 'Remove', image: 'trash', attributes: { destructive: true } },
+  ];
+
+  const handleFolderAction = (actionId: string, folder: ProjectFolder) => {
+    if (actionId === 'rename-folder') {
+      Alert.prompt(
+        'Rename folder',
+        'Set a new folder name.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save',
+            onPress: (value?: string) => {
+              const next = value?.trim();
+              if (next) { onRenameFolder(folder.id, next); }
+            },
+          },
+        ],
+        'plain-text',
+        folder.name,
+      );
+    } else if (actionId === 'remove-folder') {
+      Alert.alert(
+        'Remove folder?',
+        'Projects in this folder will be moved to another folder.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => {
+              const didRemove = onRemoveFolder(folder.id);
+              if (!didRemove) {
+                Alert.alert('Cannot remove folder', 'At least one folder must remain.');
+              }
+            },
+          },
+        ],
+      );
     }
-
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title: folder.name,
-        options: ['Rename', 'Remove', 'Cancel'],
-        cancelButtonIndex: 2,
-        destructiveButtonIndex: 1,
-      },
-      selectedIndex => {
-        if (selectedIndex === 0) {
-          promptForText('Rename folder', 'Set a new folder name.', folder.name, value => {
-            onRenameFolder(folder.id, value);
-          });
-        }
-
-        if (selectedIndex === 1) {
-          Alert.alert(
-            'Remove folder?',
-            'Projects in this folder will be moved to another folder.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Remove',
-                style: 'destructive',
-                onPress: () => {
-                  const didRemove = onRemoveFolder(folder.id);
-                  if (!didRemove) {
-                    Alert.alert('Cannot remove folder', 'At least one folder must remain.');
-                  }
-                },
-              },
-            ],
-          );
-        }
-      },
-    );
   };
 
   const allVisibleProjectsCount = regularProjects.length + trashProjects.length;
@@ -710,32 +691,56 @@ export function DashboardScreen({
                     backgroundColor: palette.floatingBackground,
                   },
                 ]}>
-                <Pressable
-                  style={styles.folderHeader}
-                  onPress={() =>
-                    setExpandedFolders(current => ({
-                      ...current,
-                      [section.id]: !(current[section.id] ?? false),
-                    }))
-                  }
-                  onLongPress={
-                    canManageFolder && folder
-                      ? () => onLongPressFolder(folder)
-                      : undefined
-                  }
-                  delayLongPress={300}>
-                  <View style={styles.folderTitleWrap}>
-                    <Text style={[styles.folderTitle, { color: palette.textPrimary }]}>
-                      {section.name}
+                {canManageFolder && folder ? (
+                  <MenuView
+                    shouldOpenOnLongPress
+                    actions={buildFolderActions()}
+                    onPressAction={({ nativeEvent }) =>
+                      handleFolderAction(nativeEvent.event, folder)
+                    }>
+                    <Pressable
+                      style={styles.folderHeader}
+                      onPress={() =>
+                        setExpandedFolders(current => ({
+                          ...current,
+                          [section.id]: !(current[section.id] ?? false),
+                        }))
+                      }>
+                      <View style={styles.folderTitleWrap}>
+                        <Text style={[styles.folderTitle, { color: palette.textPrimary }]}>
+                          {section.name}
+                        </Text>
+                        <Text style={[styles.folderCount, { color: palette.textSecondary }]}>
+                          {section.items.length}
+                        </Text>
+                      </View>
+                      <Text style={[styles.folderChevron, { color: palette.textSecondary }]}>
+                        {isExpanded ? '▾' : '▸'}
+                      </Text>
+                    </Pressable>
+                  </MenuView>
+                ) : (
+                  <Pressable
+                    style={styles.folderHeader}
+                    onPress={() =>
+                      setExpandedFolders(current => ({
+                        ...current,
+                        [section.id]: !(current[section.id] ?? false),
+                      }))
+                    }>
+                    <View style={styles.folderTitleWrap}>
+                      <Text style={[styles.folderTitle, { color: palette.textPrimary }]}>
+                        {section.name}
+                      </Text>
+                      <Text style={[styles.folderCount, { color: palette.textSecondary }]}>
+                        {section.items.length}
+                      </Text>
+                    </View>
+                    <Text style={[styles.folderChevron, { color: palette.textSecondary }]}>
+                      {isExpanded ? '▾' : '▸'}
                     </Text>
-                    <Text style={[styles.folderCount, { color: palette.textSecondary }]}>
-                      {section.items.length}
-                    </Text>
-                  </View>
-                  <Text style={[styles.folderChevron, { color: palette.textSecondary }]}>
-                    {isExpanded ? '▾' : '▸'}
-                  </Text>
-                </Pressable>
+                  </Pressable>
+                )}
 
                 {isExpanded ? (
                   section.items.length > 0 ? (

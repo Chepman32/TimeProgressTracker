@@ -88,7 +88,7 @@ export function CountdownCard({
   const accent = item.accentColor ?? theme.colors.accent;
   const pinSymbolStyle = { color: accent };
 
-  return (
+  const cardView = (
     <Animated.View
       style={[
         styles.container,
@@ -177,6 +177,7 @@ export function CountdownCard({
       </Pressable>
     </Animated.View>
   );
+  return cardView;
 }
 
 const styles = StyleSheet.create({
