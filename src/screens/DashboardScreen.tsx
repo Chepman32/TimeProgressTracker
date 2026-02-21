@@ -26,7 +26,7 @@ import { CountdownCard } from '../components/CountdownCard';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { ProgressRing } from '../components/ProgressRing';
 import { MenuView } from '@react-native-menu/menu';
-import { isSameDay, differenceInCalendarDays } from 'date-fns';
+import { isSameDay, endOfWeek, endOfMonth } from 'date-fns';
 
 interface DashboardScreenProps {
   countdowns: CountdownItem[];
@@ -50,8 +50,8 @@ interface DashboardScreenProps {
 }
 
 type FilterMode = 'active' | 'all' | 'archived';
-type SortMode = 'endDate' | 'createdAt' | 'updatedAt' | 'title';
-type EndDateFilter = 'all' | 'today' | 'nextWeek' | 'nextMonth';
+type SortMode = 'createdAt' | 'updatedAt' | 'completion';
+type EndDateFilter = 'all' | 'today' | 'thisWeek' | 'thisMonth';
 
 interface FolderSection {
   id: string;
@@ -90,7 +90,7 @@ export function DashboardScreen({
     defaultShowArchived ? 'all' : 'active',
   );
   const [query, setQuery] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('endDate');
+  const [sortMode, setSortMode] = useState<SortMode>('createdAt');
   const [endDateFilter, setEndDateFilter] = useState<EndDateFilter>('all');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     [ALL_PROJECTS_FOLDER_ID]: true,
@@ -149,32 +149,32 @@ export function DashboardScreen({
         if (endDateFilter === 'today') {
           return isSameDay(target, now);
         }
-        const diff = differenceInCalendarDays(target, now);
-        if (endDateFilter === 'nextWeek') {
-          return diff >= 0 && diff <= 7;
+        if (endDateFilter === 'thisWeek') {
+          return target >= now && target <= endOfWeek(now, { weekStartsOn: 1 });
         }
-        if (endDateFilter === 'nextMonth') {
-          return diff >= 0 && diff <= 30;
+        if (endDateFilter === 'thisMonth') {
+          return target >= now && target <= endOfMonth(now);
         }
         return true;
       });
     }
 
-    if (sortMode !== 'endDate') {
-      items = [...items].sort((a, b) => {
-        if (a.pinned !== b.pinned) {
-          return a.pinned ? -1 : 1;
+    items = [...items].sort((a, b) => {
+      if (a.pinned !== b.pinned) {
+        return a.pinned ? -1 : 1;
+      }
+      switch (sortMode) {
+        case 'createdAt':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'updatedAt':
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        case 'completion': {
+          const aProgress = calculateCountdownMetrics(a, now).progress;
+          const bProgress = calculateCountdownMetrics(b, now).progress;
+          return bProgress - aProgress;
         }
-        switch (sortMode) {
-          case 'createdAt':
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          case 'updatedAt':
-            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-          case 'title':
-            return a.title.localeCompare(b.title);
-        }
-      });
-    }
+      }
+    });
 
     return items;
   }, [countdowns, filterMode, normalizedQuery, endDateFilter, sortMode, now]);
@@ -549,36 +549,32 @@ export function DashboardScreen({
             <MenuView
               onPressAction={({ nativeEvent }) => {
                 const id = nativeEvent.event;
-                if (id === 'sort-endDate') { setSortMode('endDate'); }
                 if (id === 'sort-createdAt') { setSortMode('createdAt'); }
                 if (id === 'sort-updatedAt') { setSortMode('updatedAt'); }
-                if (id === 'sort-title') { setSortMode('title'); }
+                if (id === 'sort-completion') { setSortMode('completion'); }
                 if (id === 'filter-all') { setEndDateFilter('all'); }
                 if (id === 'filter-today') { setEndDateFilter('today'); }
-                if (id === 'filter-nextWeek') { setEndDateFilter('nextWeek'); }
-                if (id === 'filter-nextMonth') { setEndDateFilter('nextMonth'); }
+                if (id === 'filter-thisWeek') { setEndDateFilter('thisWeek'); }
+                if (id === 'filter-thisMonth') { setEndDateFilter('thisMonth'); }
               }}
               actions={[
                 {
                   id: 'sortGroup',
                   title: 'Sort by',
-                  displayInline: true,
-                  subActions: [
-                    { id: 'sort-endDate', title: 'End Date', state: sortMode === 'endDate' ? 'on' : 'off' },
+                  subactions: [
                     { id: 'sort-createdAt', title: 'Created', state: sortMode === 'createdAt' ? 'on' : 'off' },
                     { id: 'sort-updatedAt', title: 'Updated', state: sortMode === 'updatedAt' ? 'on' : 'off' },
-                    { id: 'sort-title', title: 'Title', state: sortMode === 'title' ? 'on' : 'off' },
+                    { id: 'sort-completion', title: 'Completion %', state: sortMode === 'completion' ? 'on' : 'off' },
                   ],
                 },
                 {
                   id: 'filterGroup',
-                  title: 'End Date',
-                  displayInline: true,
-                  subActions: [
-                    { id: 'filter-all', title: 'All', state: endDateFilter === 'all' ? 'on' : 'off' },
+                  title: 'Filtering',
+                  subactions: [
                     { id: 'filter-today', title: 'Today', state: endDateFilter === 'today' ? 'on' : 'off' },
-                    { id: 'filter-nextWeek', title: 'Next Week', state: endDateFilter === 'nextWeek' ? 'on' : 'off' },
-                    { id: 'filter-nextMonth', title: 'Next Month', state: endDateFilter === 'nextMonth' ? 'on' : 'off' },
+                    { id: 'filter-thisWeek', title: 'This week', state: endDateFilter === 'thisWeek' ? 'on' : 'off' },
+                    { id: 'filter-thisMonth', title: 'This month', state: endDateFilter === 'thisMonth' ? 'on' : 'off' },
+                    { id: 'filter-all', title: 'All', state: endDateFilter === 'all' ? 'on' : 'off' },
                   ],
                 },
               ]}>
