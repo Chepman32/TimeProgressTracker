@@ -24,6 +24,7 @@ import { getThemeById } from '../domain/themes';
 import { calculateCountdownMetrics, formatDurationShort, getPeriodProgress } from '../lib/date';
 import { CountdownCard } from '../components/CountdownCard';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { ProgressRing } from '../components/ProgressRing';
 
 interface DashboardScreenProps {
   countdowns: CountdownItem[];
@@ -553,6 +554,10 @@ export function DashboardScreen({
         <View style={styles.metricsRow}>
           {periodProgress.map(progress => {
             const percentage = Math.round(progress.progress * 100);
+            const ringTrackColor = palette.isDark
+              ? 'rgba(194, 204, 255, 0.2)'
+              : 'rgba(15, 19, 36, 0.1)';
+            const ringFillColor = palette.isDark ? '#f7f8ff' : '#0f1324';
 
             return (
               <View
@@ -564,9 +569,18 @@ export function DashboardScreen({
                     borderColor: palette.border,
                   },
                 ]}>
-                <Text style={[styles.metricLabel, { color: palette.textSecondary }]}>
-                  {progress.label}
-                </Text>
+                <View style={styles.metricHeader}>
+                  <Text style={[styles.metricLabel, { color: palette.textSecondary }]}>
+                    {progress.label}
+                  </Text>
+                  <ProgressRing
+                    size={48}
+                    strokeWidth={6}
+                    progress={progress.progress}
+                    trackColor={ringTrackColor}
+                    fillColor={ringFillColor}
+                  />
+                </View>
                 <Text style={[styles.metricValue, { color: palette.textPrimary }]}>
                   {percentage}%
                 </Text>
@@ -760,31 +774,41 @@ const styles = StyleSheet.create({
   metricsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   metricCard: {
-    minWidth: '48%',
+    minWidth: '47.5%',
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 30,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 2,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 18,
+    minHeight: 172,
+    gap: 6,
   },
   metricLabel: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   metricValue: {
-    fontSize: 23,
-    fontWeight: '800',
-    letterSpacing: -0.4,
+    marginTop: 2,
+    fontSize: 54,
+    fontWeight: '700',
+    letterSpacing: -1.2,
+    lineHeight: 58,
   },
   metricSub: {
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: '600',
+    lineHeight: 24,
   },
   empty: {
     marginTop: 8,
