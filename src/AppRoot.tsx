@@ -29,6 +29,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { CountdownEditorModal } from './screens/CountdownEditorModal';
 import { CountdownDetailModal } from './screens/CountdownDetailModal';
+import { DotGridModal } from './screens/DotGridModal';
 
 export function AppRoot() {
   const { isReady, state, actions } = useCountdownStore();
@@ -42,6 +43,7 @@ export function AppRoot() {
   const [isEditorOpen, setEditorOpen] = useState(false);
   const [isProModalOpen, setProModalOpen] = useState(false);
   const [isBackupModalOpen, setBackupModalOpen] = useState(false);
+  const [visualizeId, setVisualizeId] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const sortedCountdowns = useSortedCountdowns(state.countdowns);
@@ -51,6 +53,7 @@ export function AppRoot() {
   );
   const detailItem = useCountdownById(sortedCountdowns, detailId);
   const editingItem = useCountdownById(sortedCountdowns, editorId);
+  const visualizeItem = useCountdownById(sortedCountdowns, visualizeId);
 
   const palette = useMemo(
     () => resolvePalette(state.settings.appearance, systemColorScheme),
@@ -197,6 +200,7 @@ export function AppRoot() {
                   onRemoveProjectPermanently={actions.removeCountdownPermanently}
                   onRenameFolder={actions.renameFolder}
                   onRemoveFolder={actions.removeFolder}
+                  onVisualize={setVisualizeId}
                 />
               ) : null}
 
@@ -303,6 +307,14 @@ export function AppRoot() {
             actions.setProUnlocked(true);
             setProModalOpen(false);
           }}
+        />
+
+        <DotGridModal
+          visible={Boolean(visualizeItem)}
+          item={visualizeItem}
+          now={now}
+          palette={palette}
+          onClose={() => setVisualizeId(null)}
         />
       </SafeAreaView>
     </AppBackground>

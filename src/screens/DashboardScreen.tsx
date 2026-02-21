@@ -47,6 +47,7 @@ interface DashboardScreenProps {
   onRemoveProjectPermanently: (id: string) => void;
   onRenameFolder: (id: string, name: string) => void;
   onRemoveFolder: (id: string) => boolean;
+  onVisualize: (id: string) => void;
 }
 
 type FilterMode = 'active' | 'all' | 'archived';
@@ -85,6 +86,7 @@ export function DashboardScreen({
   onRemoveProjectPermanently,
   onRenameFolder,
   onRemoveFolder,
+  onVisualize,
 }: DashboardScreenProps) {
   const [filterMode, setFilterMode] = useState<FilterMode>(
     defaultShowArchived ? 'all' : 'active',
@@ -379,16 +381,20 @@ export function DashboardScreen({
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: project.title,
-          options: ['Recover', 'Remove Permanently', 'Cancel'],
-          cancelButtonIndex: 2,
-          destructiveButtonIndex: 1,
+          options: ['Visualize', 'Recover', 'Remove Permanently', 'Cancel'],
+          cancelButtonIndex: 3,
+          destructiveButtonIndex: 2,
         },
         selectedIndex => {
           if (selectedIndex === 0) {
-            handleProjectAction('recover', project);
+            onVisualize(project.id);
           }
 
           if (selectedIndex === 1) {
+            handleProjectAction('recover', project);
+          }
+
+          if (selectedIndex === 2) {
             handleProjectAction('remove-permanently', project);
           }
         },
@@ -399,24 +405,28 @@ export function DashboardScreen({
     ActionSheetIOS.showActionSheetWithOptions(
       {
         title: project.title,
-        options: ['Rename', 'Duplicate', 'Move to Folder', 'Move to Trash', 'Cancel'],
-        cancelButtonIndex: 4,
-        destructiveButtonIndex: 3,
+        options: ['Visualize', 'Rename', 'Duplicate', 'Move to Folder', 'Move to Trash', 'Cancel'],
+        cancelButtonIndex: 5,
+        destructiveButtonIndex: 4,
       },
       selectedIndex => {
         if (selectedIndex === 0) {
-          handleProjectAction('rename', project);
+          onVisualize(project.id);
         }
 
         if (selectedIndex === 1) {
-          handleProjectAction('duplicate', project);
+          handleProjectAction('rename', project);
         }
 
         if (selectedIndex === 2) {
-          onRequestMoveToFolder(project);
+          handleProjectAction('duplicate', project);
         }
 
         if (selectedIndex === 3) {
+          onRequestMoveToFolder(project);
+        }
+
+        if (selectedIndex === 4) {
           handleProjectAction('remove', project);
         }
       },
