@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
+  GestureResponderEvent,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -44,31 +44,111 @@ export function CountdownDetailModal({
   onToggleArchive,
   onDelete,
 }: CountdownDetailModalProps) {
-  const scale = useRef(new Animated.Value(0.9)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(28)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const isClosing = useRef(false);
 
-  useEffect(() => {
-    if (!visible) {
-      scale.setValue(0.9);
-      opacity.setValue(0);
+  const closeWithAnimation = useCallback(() => {
+    if (isClosing.current) {
       return;
     }
 
+    isClosing.current = true;
     Animated.parallel([
-      Animated.spring(scale, {
-        toValue: 1,
+      Animated.timing(translateY, {
+        toValue: 420,
+        duration: 220,
         useNativeDriver: true,
-        velocity: 2,
-        tension: 130,
-        friction: 15,
       }),
-      Animated.timing(opacity, {
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      isClosing.current = false;
+      onClose();
+    });
+  }, [backdropOpacity, onClose, translateY]);
+
+  useEffect(() => {
+    if (!visible) {
+      translateY.setValue(28);
+      backdropOpacity.setValue(0);
+      isClosing.current = false;
+      return;
+    }
+
+    translateY.setValue(28);
+    backdropOpacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        velocity: 1.6,
+        tension: 120,
+        friction: 14,
+      }),
+      Animated.timing(backdropOpacity, {
         toValue: 1,
-        duration: 280,
+        duration: 220,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [opacity, scale, visible]);
+  }, [backdropOpacity, translateY, visible]);
+
+  const closeWithAnimationRef = useRef(closeWithAnimation);
+  useEffect(() => {
+    closeWithAnimationRef.current = closeWithAnimation;
+  }, [closeWithAnimation]);
+
+  // Raw gesture state — tracks a single active touch
+  const gesture = useRef({ startY: 0, lastY: 0, lastTime: 0, vy: 0 });
+
+  const swipeHandlers = useRef({
+    onStartShouldSetResponder: () => true,
+    onResponderGrant: (e: GestureResponderEvent) => {
+      const y = e.nativeEvent.pageY;
+      gesture.current = { startY: y, lastY: y, lastTime: Date.now(), vy: 0 };
+    },
+    onResponderMove: (e: GestureResponderEvent) => {
+      const now = Date.now();
+      const y = e.nativeEvent.pageY;
+      const dy = y - gesture.current.startY;
+      const dt = now - gesture.current.lastTime;
+      if (dt > 0) {
+        gesture.current.vy = (y - gesture.current.lastY) / dt;
+      }
+      gesture.current.lastY = y;
+      gesture.current.lastTime = now;
+      if (dy > 0) {
+        translateY.setValue(dy);
+      }
+    },
+    onResponderRelease: () => {
+      const dy = gesture.current.lastY - gesture.current.startY;
+      const vy = gesture.current.vy;
+      if (dy > 70 || vy > 0.5) {
+        closeWithAnimationRef.current();
+      } else {
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          velocity: 1.4,
+          tension: 140,
+          friction: 16,
+        }).start();
+      }
+    },
+    onResponderTerminate: () => {
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 140,
+        friction: 16,
+      }).start();
+    },
+  }).current;
 
   if (!item) {
     return null;
@@ -79,20 +159,25 @@ export function CountdownDetailModal({
   const accent = item.accentColor ?? theme.colors.accent;
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+    <Modal visible={visible} animationType="none" transparent onRequestClose={closeWithAnimation}>
+      <Animated.View style={[styles.overlay, { opacity: backdropOpacity }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeWithAnimation} />
+
         <Animated.View
           style={[
             styles.sheet,
             {
               backgroundColor: palette.pageBackground,
               borderColor: palette.border,
-              opacity,
-              transform: [{ scale }],
+              transform: [{ translateY }],
             },
           ]}>
+          <View style={styles.swipeArea} {...swipeHandlers}>
+            <View style={[styles.swipeIndicator, { backgroundColor: palette.textSecondary }]} />
+          </View>
+
           <View style={styles.header}>
-            <Pressable onPress={onClose}>
+            <Pressable onPress={closeWithAnimation}>
               <Text style={[styles.headerAction, { color: palette.textSecondary }]}>Close</Text>
             </Pressable>
             <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>{item.title}</Text>
@@ -101,7 +186,7 @@ export function CountdownDetailModal({
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.content}>
             <View
               style={[
                 styles.hero,
@@ -109,7 +194,8 @@ export function CountdownDetailModal({
                   backgroundColor: theme.colors.cardBackground[0],
                   borderColor: theme.colors.track,
                 },
-              ]}>
+              ]}
+              {...swipeHandlers}>
               <Text style={styles.heroIcon}>{item.icon}</Text>
               <ProgressRing
                 size={138}
@@ -139,7 +225,8 @@ export function CountdownDetailModal({
               style={[
                 styles.panel,
                 { backgroundColor: palette.floatingBackground, borderColor: palette.border },
-              ]}>
+              ]}
+              {...swipeHandlers}>
               <Text style={[styles.panelTitle, { color: palette.textPrimary }]}>Schedule</Text>
               <Text style={[styles.panelLine, { color: palette.textSecondary }]}>Start: {formatFullDate(metrics.windowStart)} · {formatTime(metrics.windowStart)}</Text>
               <Text style={[styles.panelLine, { color: palette.textSecondary }]}>Target: {formatFullDate(metrics.windowEnd)} · {formatTime(metrics.windowEnd)}</Text>
@@ -151,7 +238,8 @@ export function CountdownDetailModal({
               style={[
                 styles.panel,
                 { backgroundColor: palette.floatingBackground, borderColor: palette.border },
-              ]}>
+              ]}
+              {...swipeHandlers}>
               <Text style={[styles.panelTitle, { color: palette.textPrimary }]}>Insights</Text>
               <Text style={[styles.panelLine, { color: palette.textSecondary }]}>Elapsed: {formatDurationShort(metrics.elapsedMs, 3)}</Text>
               <Text style={[styles.panelLine, { color: palette.textSecondary }]}>Remaining: {formatDurationShort(metrics.remainingMs, 3)}</Text>
@@ -188,9 +276,9 @@ export function CountdownDetailModal({
                 </Text>
               </Pressable>
             </View>
-          </ScrollView>
+          </View>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -200,9 +288,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(4, 6, 14, 0.42)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 10,
-    paddingVertical: 24,
+    paddingTop: 56,
+    paddingBottom: 12,
   },
   sheet: {
     width: '100%',
@@ -212,12 +301,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
+  swipeArea: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 8,
+    minHeight: 28,
+  },
+  swipeIndicator: {
+    width: 42,
+    height: 5,
+    borderRadius: 3,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingTop: 14,
+    paddingTop: 8,
     paddingBottom: 10,
   },
   headerAction: {
