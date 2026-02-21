@@ -6,7 +6,7 @@ import { BottomTabBar } from './components/BottomTabBar';
 import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { ProUnlockModal } from './components/ProUnlockModal';
 import { resolvePalette } from './domain/palette';
-import { DEFAULT_FOLDER_ID } from './domain/folders';
+import { UNASSIGNED_FOLDER_ID } from './domain/folders';
 import { AppTab, CountdownItem } from './domain/types';
 import { getThemeById } from './domain/themes';
 import {
@@ -186,6 +186,7 @@ export function AppRoot() {
                   defaultShowArchived={state.settings.showArchivedByDefault}
                   palette={palette}
                   onCreate={openCreateModal}
+                  onCreateFolder={actions.createFolder}
                   onOpen={setDetailId}
                   onTogglePin={actions.togglePin}
                   onRenameProject={actions.renameCountdown}
@@ -260,7 +261,7 @@ export function AppRoot() {
         <CountdownEditorModal
           visible={isEditorOpen}
           palette={palette}
-          defaultFolderId={state.folders[0]?.id ?? DEFAULT_FOLDER_ID}
+          defaultFolderId={state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID}
           countdown={editingItem}
           proUnlocked={state.proUnlocked}
           onRequirePro={requirePro}

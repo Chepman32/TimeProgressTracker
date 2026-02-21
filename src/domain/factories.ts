@@ -9,7 +9,7 @@ import {
   ThemeId,
 } from './types';
 import { createId } from '../lib/id';
-import { createDefaultFolder, DEFAULT_FOLDER_ID } from './folders';
+import { UNASSIGNED_FOLDER_ID } from './folders';
 
 export const DEFAULT_NOTIFICATIONS: NotificationSettings = {
   weekBefore: true,
@@ -34,7 +34,7 @@ function toIso(date: Date): string {
 export function createCountdownFromPreset(
   preset: CountdownPreset,
   nowDate = new Date(),
-  folderId = DEFAULT_FOLDER_ID,
+  folderId = UNASSIGNED_FOLDER_ID,
 ): CountdownItem {
   const targetDate = addDays(nowDate, preset.defaultDurationDays);
   const startDate = preset.mode === 'countup' ? subDays(nowDate, 30) : nowDate;
@@ -63,7 +63,7 @@ export function createCountdownFromPreset(
 
 export function createBlankCountdown(
   themeId: ThemeId = 'swiss',
-  folderId = DEFAULT_FOLDER_ID,
+  folderId = UNASSIGNED_FOLDER_ID,
 ): CountdownItem {
   const startDate = new Date();
   const targetDate = addDays(startDate, 30);
@@ -108,7 +108,7 @@ export function buildInitialState(): AppState {
     onboardingCompleted: false,
     proUnlocked: false,
     settings: { ...DEFAULT_SETTINGS },
-    folders: [createDefaultFolder(now)],
+    folders: [],
     countdowns: buildInitialCountdowns(),
   };
 }

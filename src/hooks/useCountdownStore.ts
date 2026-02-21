@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { buildInitialState, createCountdownFromPreset } from '../domain/factories';
-import { DEFAULT_FOLDER_ID } from '../domain/folders';
+import { UNASSIGNED_FOLDER_ID } from '../domain/folders';
 import {
   CountdownPreset,
   AppState,
@@ -336,7 +336,7 @@ export function useCountdownStore(): CountdownStore {
           return;
         }
 
-        const fallbackFolderId = state.folders[0]?.id ?? DEFAULT_FOLDER_ID;
+        const fallbackFolderId = state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID;
         const desiredFolderId = item.previousFolderId ?? item.folderId;
         const targetFolderId = state.folders.some(folder => folder.id === desiredFolderId)
           ? desiredFolderId
@@ -348,7 +348,7 @@ export function useCountdownStore(): CountdownStore {
         dispatch({ type: 'remove_permanently', payload: { id } }),
       cleanTrash: () => dispatch({ type: 'clean_trash' }),
       addFromPreset: (preset: CountdownPreset) => {
-        const firstFolderId = state.folders[0]?.id ?? DEFAULT_FOLDER_ID;
+        const firstFolderId = state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID;
         const item = createCountdownFromPreset(preset, new Date(), firstFolderId);
         dispatch({ type: 'create', payload: item });
         return item;
@@ -369,14 +369,16 @@ export function useCountdownStore(): CountdownStore {
       renameFolder: (id: string, name: string) =>
         dispatch({ type: 'rename_folder', payload: { id, name } }),
       removeFolder: (id: string) => {
-        const fallbackFolder = state.folders.find(folder => folder.id !== id);
-        if (!fallbackFolder) {
+        if (!state.folders.some(folder => folder.id === id)) {
           return false;
         }
 
+        const fallbackFolderId =
+          state.folders.find(folder => folder.id !== id)?.id ?? UNASSIGNED_FOLDER_ID;
+
         dispatch({
           type: 'remove_folder',
-          payload: { id, fallbackFolderId: fallbackFolder.id },
+          payload: { id, fallbackFolderId },
         });
         return true;
       },

@@ -31,6 +31,7 @@ interface DashboardScreenProps {
   defaultShowArchived: boolean;
   palette: ResolvedPalette;
   onCreate: () => void;
+  onCreateFolder: (name: string) => void;
   onOpen: (id: string) => void;
   onTogglePin: (id: string) => void;
   onRenameProject: (id: string, title: string) => void;
@@ -66,6 +67,7 @@ export function DashboardScreen({
   defaultShowArchived,
   palette,
   onCreate,
+  onCreateFolder,
   onOpen,
   onTogglePin,
   onRenameProject,
@@ -385,6 +387,36 @@ export function DashboardScreen({
   };
 
   const allVisibleProjectsCount = regularProjects.length + trashProjects.length;
+  const onPressCreateFolder = () => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+
+    Alert.prompt(
+      'Create folder',
+      'Enter a folder name.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create',
+          onPress: value => {
+            if (typeof value !== 'string') {
+              return;
+            }
+
+            const name = value.trim();
+            if (!name) {
+              return;
+            }
+
+            onCreateFolder(name);
+          },
+        },
+      ],
+      'plain-text',
+      '',
+    );
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -394,11 +426,26 @@ export function DashboardScreen({
             <Text style={[styles.overline, { color: palette.textSecondary }]}>Pretty Progress</Text>
             <Text style={[styles.title, { color: palette.textPrimary }]}>Your Timers</Text>
           </View>
-          <Pressable
-            style={[styles.createButton, { backgroundColor: palette.textPrimary }]}
-            onPress={onCreate}>
-            <Text style={styles.createButtonText}>＋</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={[
+                styles.addFolderHeaderButton,
+                {
+                  borderColor: palette.border,
+                  backgroundColor: palette.floatingBackground,
+                },
+              ]}
+              onPress={onPressCreateFolder}>
+              <Text style={[styles.addFolderHeaderButtonText, { color: palette.textPrimary }]}>
+                Add Folder
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.createButton, { backgroundColor: palette.textPrimary }]}
+              onPress={onCreate}>
+              <Text style={styles.createButtonText}>＋</Text>
+            </Pressable>
+          </View>
         </View>
 
         <TextInput
@@ -571,8 +618,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   headerTitleWrap: {
     gap: 2,
+    flex: 1,
   },
   overline: {
     fontSize: 12,
@@ -597,6 +650,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 27,
     fontWeight: '600',
+  },
+  addFolderHeaderButton: {
+    borderWidth: 1,
+    borderRadius: 13,
+    height: 40,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addFolderHeaderButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   search: {
     borderWidth: 1,

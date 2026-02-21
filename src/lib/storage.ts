@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildInitialState } from '../domain/factories';
 import { AppState, CountdownItem, ProjectFolder } from '../domain/types';
-import { DEFAULT_FOLDER_ID } from '../domain/folders';
+import { LEGACY_DEFAULT_FOLDER_ID, UNASSIGNED_FOLDER_ID } from '../domain/folders';
 
 const STORAGE_KEY = '@time-progress-tracker/state-v1';
 
@@ -55,8 +55,11 @@ function normalizeFolders(rawFolders: unknown, fallbackFolders: ProjectFolder[])
   const deduped = normalized.filter(
     (folder, index, all) => all.findIndex(item => item.id === folder.id) === index,
   );
+  const withoutLegacyDefault = deduped.filter(
+    folder => folder.id !== LEGACY_DEFAULT_FOLDER_ID,
+  );
 
-  return deduped.length > 0 ? deduped : fallbackFolders;
+  return withoutLegacyDefault.length > 0 ? withoutLegacyDefault : fallbackFolders;
 }
 
 function normalizeCountdowns(
@@ -71,10 +74,14 @@ function normalizeCountdowns(
 
   return rawCountdowns.map(countdown => {
     const typed = countdown as CountdownItem;
-    const requestedFolderId =
+    const requestedFolderIdRaw =
       typeof typed.folderId === 'string' && typed.folderId.length > 0
         ? typed.folderId
         : fallbackFolderId;
+    const requestedFolderId =
+      requestedFolderIdRaw === LEGACY_DEFAULT_FOLDER_ID
+        ? fallbackFolderId
+        : requestedFolderIdRaw;
     const resolvedFolderId = folderIds.has(requestedFolderId)
       ? requestedFolderId
       : fallbackFolderId;
@@ -84,7 +91,9 @@ function normalizeCountdowns(
         : null;
     const requestedPreviousFolderId =
       typeof typed.previousFolderId === 'string' && typed.previousFolderId.length > 0
-        ? typed.previousFolderId
+        ? typed.previousFolderId === LEGACY_DEFAULT_FOLDER_ID
+          ? fallbackFolderId
+          : typed.previousFolderId
         : null;
     const previousFolderId =
       trashedAt && requestedPreviousFolderId && folderIds.has(requestedPreviousFolderId)
@@ -111,7 +120,7 @@ function migrateAppState(rawState: unknown): AppState {
   const fallback = buildInitialState();
   const folders = normalizeFolders(next.folders, fallback.folders);
   const folderIds = new Set(folders.map(folder => folder.id));
-  const fallbackFolderId = folders[0]?.id ?? DEFAULT_FOLDER_ID;
+  const fallbackFolderId = folders[0]?.id ?? UNASSIGNED_FOLDER_ID;
   const countdowns = normalizeCountdowns(
     next.countdowns,
     folderIds,
