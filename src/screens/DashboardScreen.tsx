@@ -25,6 +25,8 @@ import { calculateCountdownMetrics, formatDurationShort, getPeriodProgress } fro
 import { CountdownCard } from '../components/CountdownCard';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { ProgressRing } from '../components/ProgressRing';
+import { MenuView } from '@react-native-menu/menu';
+import { isSameDay, differenceInCalendarDays } from 'date-fns';
 
 interface DashboardScreenProps {
   countdowns: CountdownItem[];
@@ -48,6 +50,8 @@ interface DashboardScreenProps {
 }
 
 type FilterMode = 'active' | 'all' | 'archived';
+type SortMode = 'endDate' | 'createdAt' | 'updatedAt' | 'title';
+type EndDateFilter = 'all' | 'today' | 'nextWeek' | 'nextMonth';
 
 interface FolderSection {
   id: string;
@@ -86,6 +90,8 @@ export function DashboardScreen({
     defaultShowArchived ? 'all' : 'active',
   );
   const [query, setQuery] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('endDate');
+  const [endDateFilter, setEndDateFilter] = useState<EndDateFilter>('all');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     [ALL_PROJECTS_FOLDER_ID]: true,
   });
@@ -114,7 +120,7 @@ export function DashboardScreen({
   }, [now, weekStartsOnMonday]);
 
   const regularProjects = useMemo(() => {
-    return countdowns.filter(item => {
+    let items = countdowns.filter(item => {
       if (item.trashedAt) {
         return false;
       }
@@ -136,7 +142,42 @@ export function DashboardScreen({
         item.notes.toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [countdowns, filterMode, normalizedQuery]);
+
+    if (endDateFilter !== 'all') {
+      items = items.filter(item => {
+        const target = new Date(item.targetDate);
+        if (endDateFilter === 'today') {
+          return isSameDay(target, now);
+        }
+        const diff = differenceInCalendarDays(target, now);
+        if (endDateFilter === 'nextWeek') {
+          return diff >= 0 && diff <= 7;
+        }
+        if (endDateFilter === 'nextMonth') {
+          return diff >= 0 && diff <= 30;
+        }
+        return true;
+      });
+    }
+
+    if (sortMode !== 'endDate') {
+      items = [...items].sort((a, b) => {
+        if (a.pinned !== b.pinned) {
+          return a.pinned ? -1 : 1;
+        }
+        switch (sortMode) {
+          case 'createdAt':
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case 'updatedAt':
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          case 'title':
+            return a.title.localeCompare(b.title);
+        }
+      });
+    }
+
+    return items;
+  }, [countdowns, filterMode, normalizedQuery, endDateFilter, sortMode, now]);
 
   const trashProjects = useMemo(() => {
     return countdowns.filter(item => {
@@ -505,6 +546,50 @@ export function DashboardScreen({
             <Text style={[styles.title, { color: palette.textPrimary }]}>Your Timers</Text>
           </View>
           <View style={styles.headerActions}>
+            <MenuView
+              onPressAction={({ nativeEvent }) => {
+                const id = nativeEvent.event;
+                if (id === 'sort-endDate') { setSortMode('endDate'); }
+                if (id === 'sort-createdAt') { setSortMode('createdAt'); }
+                if (id === 'sort-updatedAt') { setSortMode('updatedAt'); }
+                if (id === 'sort-title') { setSortMode('title'); }
+                if (id === 'filter-all') { setEndDateFilter('all'); }
+                if (id === 'filter-today') { setEndDateFilter('today'); }
+                if (id === 'filter-nextWeek') { setEndDateFilter('nextWeek'); }
+                if (id === 'filter-nextMonth') { setEndDateFilter('nextMonth'); }
+              }}
+              actions={[
+                {
+                  id: 'sortGroup',
+                  title: 'Sort by',
+                  displayInline: true,
+                  subActions: [
+                    { id: 'sort-endDate', title: 'End Date', state: sortMode === 'endDate' ? 'on' : 'off' },
+                    { id: 'sort-createdAt', title: 'Created', state: sortMode === 'createdAt' ? 'on' : 'off' },
+                    { id: 'sort-updatedAt', title: 'Updated', state: sortMode === 'updatedAt' ? 'on' : 'off' },
+                    { id: 'sort-title', title: 'Title', state: sortMode === 'title' ? 'on' : 'off' },
+                  ],
+                },
+                {
+                  id: 'filterGroup',
+                  title: 'End Date',
+                  displayInline: true,
+                  subActions: [
+                    { id: 'filter-all', title: 'All', state: endDateFilter === 'all' ? 'on' : 'off' },
+                    { id: 'filter-today', title: 'Today', state: endDateFilter === 'today' ? 'on' : 'off' },
+                    { id: 'filter-nextWeek', title: 'Next Week', state: endDateFilter === 'nextWeek' ? 'on' : 'off' },
+                    { id: 'filter-nextMonth', title: 'Next Month', state: endDateFilter === 'nextMonth' ? 'on' : 'off' },
+                  ],
+                },
+              ]}>
+              <Pressable
+                style={[
+                  styles.menuButton,
+                  { borderColor: palette.border, backgroundColor: palette.floatingBackground },
+                ]}>
+                <Text style={[styles.menuButtonText, { color: palette.textPrimary }]}>•••</Text>
+              </Pressable>
+            </MenuView>
             <Pressable
               style={[
                 styles.addFolderHeaderButton,
@@ -749,6 +834,19 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 24,
     lineHeight: 27,
+    fontWeight: '600',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuButtonText: {
+    fontSize: 13,
+    letterSpacing: 1,
     fontWeight: '600',
   },
   addFolderHeaderButton: {
