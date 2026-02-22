@@ -104,8 +104,16 @@ export function clampProgress(value: number): number {
   return value;
 }
 
-export function formatDurationShort(rawMs: number, maxUnits = 2): string {
+export function formatDurationShort(
+  rawMs: number,
+  maxUnits = 2,
+  showSecondsUnderMinute = false,
+): string {
   const ms = Math.abs(rawMs);
+
+  if (showSecondsUnderMinute && ms <= MINUTE_MS) {
+    return `${Math.ceil(ms / 1000)}s`;
+  }
 
   if (ms < MINUTE_MS) {
     return '<1m';
@@ -215,6 +223,10 @@ export function calculateCountdownMetrics(
 
   const isPastTarget = item.recurrence === 'none' && remainingMs < 0;
   const countdownLabel = remainingMs >= 0 ? 'remaining' : 'overdue';
+  const expiredDuration = formatDurationShort(Math.abs(remainingMs), 3, true);
+  const primaryLabel = isPastTarget
+    ? `Expired ${expiredDuration} ago`
+    : formatDurationShort(remainingMs, 3, true);
 
   return {
     windowStart,
@@ -226,7 +238,7 @@ export function calculateCountdownMetrics(
     isPastTarget,
     isRecurringWindow,
     displayDurationMs: Math.abs(remainingMs),
-    primaryLabel: formatDurationShort(remainingMs, 3),
+    primaryLabel,
     secondaryLabel: countdownLabel,
     percentageLabel: `${Math.round(progress * 100)}%`,
   };

@@ -9,6 +9,7 @@ import { resolvePalette } from './domain/palette';
 import { UNASSIGNED_FOLDER_ID } from './domain/folders';
 import { AppTab, CountdownItem } from './domain/types';
 import { getThemeById } from './domain/themes';
+import { createCountdownFromPreset } from './domain/factories';
 import {
   useCountdownById,
   useCountdownStore,
@@ -42,6 +43,7 @@ export function AppRoot() {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [editorId, setEditorId] = useState<string | null>(null);
+  const [editorInitialCountdown, setEditorInitialCountdown] = useState<CountdownItem | undefined>();
   const [isEditorOpen, setEditorOpen] = useState(false);
   const [isProModalOpen, setProModalOpen] = useState(false);
   const [isBackupModalOpen, setBackupModalOpen] = useState(false);
@@ -104,12 +106,14 @@ export function AppRoot() {
 
   const openCreateModal = () => {
     setEditorId(null);
+    setEditorInitialCountdown(undefined);
     setEditorOpen(true);
   };
 
   const openEditModal = (id: string) => {
     setDetailId(null);
     setEditorId(id);
+    setEditorInitialCountdown(undefined);
     setEditorOpen(true);
   };
 
@@ -252,9 +256,12 @@ export function AppRoot() {
                       return;
                     }
 
-                    const created = actions.addFromPreset(preset);
-                    setActiveTab('dashboard');
-                    setDetailId(created.id);
+                    const folderId = state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID;
+                    const seeded = createCountdownFromPreset(preset, new Date(), folderId);
+                    seeded.notifications = { ...state.settings.notificationDefaults };
+                    setEditorId(null);
+                    setEditorInitialCountdown(seeded);
+                    setEditorOpen(true);
                   }}
                 />
               ) : null}
@@ -305,11 +312,13 @@ export function AppRoot() {
           defaultFolderId={state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID}
           defaultNotifications={state.settings.notificationDefaults}
           countdown={editingItem}
+          initialCountdown={editorInitialCountdown}
           proUnlocked={state.proUnlocked}
           onRequirePro={requirePro}
           onClose={() => {
             setEditorOpen(false);
             setEditorId(null);
+            setEditorInitialCountdown(undefined);
           }}
           onSave={onSaveCountdown}
         />

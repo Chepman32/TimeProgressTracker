@@ -3,6 +3,7 @@ import {
   ActionSheetIOS,
   Alert,
   LayoutAnimation,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -36,7 +37,7 @@ interface DashboardScreenProps {
   defaultShowArchived: boolean;
   palette: ResolvedPalette;
   onCreate: () => void;
-  onCreateFolder: (name: string) => void;
+  onCreateFolder: (name: string) => ProjectFolder;
   onOpen: (id: string) => void;
   onTogglePin: (id: string) => void;
   onRenameProject: (id: string, title: string) => void;
@@ -103,6 +104,9 @@ export function DashboardScreen({
     [ALL_PROJECTS_FOLDER_ID]: true,
   });
   const [pendingPinFocus, setPendingPinFocus] = useState<PendingPinFocus | null>(null);
+  const [isCreateFolderModalVisible, setCreateFolderModalVisible] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [pendingMoveProject, setPendingMoveProject] = useState<CountdownItem | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
   const scrollOffsetYRef = useRef(0);
   const viewportHeightRef = useRef(0);
@@ -344,7 +348,9 @@ export function DashboardScreen({
 
     const targets = folders.filter(folder => folder.id !== project.folderId);
     if (targets.length === 0) {
-      Alert.alert('No other folders', 'Create another folder before moving this project.');
+      setPendingMoveProject(project);
+      setNewFolderName('');
+      setCreateFolderModalVisible(true);
       return;
     }
 
@@ -477,34 +483,29 @@ export function DashboardScreen({
 
   const allVisibleProjectsCount = regularProjects.length + trashProjects.length;
   const onPressCreateFolder = () => {
-    if (Platform.OS !== 'ios') {
+    setPendingMoveProject(null);
+    setNewFolderName('');
+    setCreateFolderModalVisible(true);
+  };
+
+  const onCloseCreateFolderModal = () => {
+    setCreateFolderModalVisible(false);
+    setNewFolderName('');
+    setPendingMoveProject(null);
+  };
+
+  const onSubmitCreateFolder = () => {
+    const name = newFolderName.trim();
+    if (!name) {
       return;
     }
 
-    Alert.prompt(
-      'Create folder',
-      'Enter a folder name.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Create',
-          onPress: (value?: string) => {
-            if (typeof value !== 'string') {
-              return;
-            }
+    const createdFolder = onCreateFolder(name);
+    if (pendingMoveProject) {
+      onMoveProjectToFolder(pendingMoveProject.id, createdFolder.id);
+    }
 
-            const name = value.trim();
-            if (!name) {
-              return;
-            }
-
-            onCreateFolder(name);
-          },
-        },
-      ],
-      'plain-text',
-      '',
-    );
+    onCloseCreateFolderModal();
   };
 
   const onTogglePinWithAnimation = (sectionId: string, id: string) => {
@@ -520,25 +521,25 @@ export function DashboardScreen({
   };
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      scrollEventThrottle={16}
-      onScroll={event => {
-        scrollOffsetYRef.current = event.nativeEvent.contentOffset.y;
-      }}
-      onLayout={event => {
-        viewportHeightRef.current = event.nativeEvent.layout.height;
-      }}
-      onContentSizeChange={(_, contentHeight) => {
-        contentHeightRef.current = contentHeight;
-      }}>
-      <View style={styles.headerStack}>
+    <>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={event => {
+          scrollOffsetYRef.current = event.nativeEvent.contentOffset.y;
+        }}
+        onLayout={event => {
+          viewportHeightRef.current = event.nativeEvent.layout.height;
+        }}
+        onContentSizeChange={(_, contentHeight) => {
+          contentHeightRef.current = contentHeight;
+        }}>
+        <View style={styles.headerStack}>
         <View style={styles.headerRow}>
           <View style={styles.headerTitleWrap}>
-            <Text style={[styles.overline, { color: palette.textSecondary }]}>Pretty Progress</Text>
-            <Text style={[styles.title, { color: palette.textPrimary }]}>Your Timers</Text>
+            <Text style={[styles.appName, { color: palette.textPrimary }]}>Pretty Progress</Text>
           </View>
           <View style={styles.headerActions}>
             <MenuView
@@ -798,8 +799,67 @@ export function DashboardScreen({
             );
           })}
         </View>
-      )}
-    </ScrollView>
+        )}
+      </ScrollView>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={isCreateFolderModalVisible}
+        onRequestClose={onCloseCreateFolderModal}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onCloseCreateFolderModal} />
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: palette.floatingBackground, borderColor: palette.border },
+            ]}>
+            <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Create folder</Text>
+            <Text style={[styles.modalSubtitle, { color: palette.textSecondary }]}>
+              {pendingMoveProject
+                ? 'Create a folder to move this project.'
+                : 'Enter a folder name.'}
+            </Text>
+            <TextInput
+              autoFocus
+              placeholder="Folder name"
+              placeholderTextColor={palette.textTertiary}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              style={[
+                styles.modalInput,
+                {
+                  color: palette.textPrimary,
+                  borderColor: palette.border,
+                  backgroundColor: palette.pageBackground,
+                },
+              ]}
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={onCloseCreateFolderModal}
+                style={[
+                  styles.modalButton,
+                  { borderColor: palette.border, backgroundColor: palette.pageBackground },
+                ]}>
+                <Text style={[styles.modalButtonText, { color: palette.textSecondary }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={onSubmitCreateFolder}
+                style={[
+                  styles.modalButton,
+                  styles.modalPrimaryButton,
+                  { backgroundColor: palette.textPrimary },
+                ]}>
+                <Text style={styles.modalPrimaryButtonText}>Create</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -828,16 +888,11 @@ const styles = StyleSheet.create({
     gap: 2,
     flex: 1,
   },
-  overline: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 34,
+  appName: {
+    fontSize: 36,
+    lineHeight: 40,
     letterSpacing: -0.6,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   createButton: {
     width: 46,
@@ -875,7 +930,7 @@ const styles = StyleSheet.create({
   },
   addFolderHeaderButtonText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   search: {
     borderWidth: 1,
@@ -883,7 +938,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   metricsRow: {
     flexDirection: 'row',
@@ -908,20 +963,20 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   metricValue: {
     marginTop: 2,
     fontSize: 54,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -1.2,
     lineHeight: 58,
   },
   metricSub: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: 24,
   },
   empty: {
@@ -935,7 +990,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 19,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   emptySub: {
     textAlign: 'center',
@@ -951,7 +1006,7 @@ const styles = StyleSheet.create({
   emptyActionText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   folderStack: {
     gap: 10,
@@ -975,11 +1030,11 @@ const styles = StyleSheet.create({
   },
   folderTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   folderCount: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   folderChevron: {
     fontSize: 18,
@@ -990,7 +1045,66 @@ const styles = StyleSheet.create({
   },
   emptyFolderText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     paddingBottom: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(6, 8, 20, 0.4)',
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  modalTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    fontSize: 15,
+    fontWeight: '500',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 4,
+  },
+  modalButton: {
+    minWidth: 88,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  modalPrimaryButton: {
+    borderWidth: 0,
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalPrimaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

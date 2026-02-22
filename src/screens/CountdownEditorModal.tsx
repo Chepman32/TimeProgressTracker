@@ -37,6 +37,7 @@ interface CountdownEditorModalProps {
   defaultFolderId: string;
   defaultNotifications: NotificationSettings;
   countdown?: CountdownItem;
+  initialCountdown?: CountdownItem;
   proUnlocked: boolean;
   onRequirePro: () => void;
   onClose: () => void;
@@ -70,6 +71,7 @@ export function CountdownEditorModal({
   defaultFolderId,
   defaultNotifications,
   countdown,
+  initialCountdown,
   proUnlocked,
   onRequirePro,
   onClose,
@@ -91,10 +93,12 @@ export function CountdownEditorModal({
     setDraft(
       countdown
         ? { ...countdown }
-        : createBlankCountdown('swiss', defaultFolderId, defaultNotifications),
+        : initialCountdown
+          ? { ...initialCountdown }
+          : createBlankCountdown('swiss', defaultFolderId, defaultNotifications),
     );
     setPickerField(null);
-  }, [countdown, defaultFolderId, defaultNotifications, visible]);
+  }, [countdown, defaultFolderId, defaultNotifications, initialCountdown, visible]);
 
   const activeDateValue = useMemo(() => {
     if (!pickerField) {

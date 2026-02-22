@@ -209,13 +209,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 29,
+    fontWeight: '600',
     letterSpacing: 0.2,
   },
   subtitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   pinButton: {
     width: 34,
@@ -241,8 +241,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   primaryValue: {
-    fontSize: 29,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '600',
     letterSpacing: -0.4,
   },
   barWrap: {
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   },
   percentage: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
@@ -261,6 +261,6 @@ const styles = StyleSheet.create({
   footerText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });
