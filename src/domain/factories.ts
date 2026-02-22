@@ -115,7 +115,7 @@ export function buildInitialState(): AppState {
   return {
     schemaVersion: 4,
     onboardingCompleted: false,
-    proUnlocked: false,
+    proUnlocked: true,
     settings: { ...DEFAULT_SETTINGS },
     folders: [],
     countdowns: buildInitialCountdowns(),

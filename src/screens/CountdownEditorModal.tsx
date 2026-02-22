@@ -38,8 +38,6 @@ interface CountdownEditorModalProps {
   defaultNotifications: NotificationSettings;
   countdown?: CountdownItem;
   initialCountdown?: CountdownItem;
-  proUnlocked: boolean;
-  onRequirePro: () => void;
   onClose: () => void;
   onSave: (item: CountdownItem) => boolean;
 }
@@ -72,8 +70,6 @@ export function CountdownEditorModal({
   defaultNotifications,
   countdown,
   initialCountdown,
-  proUnlocked,
-  onRequirePro,
   onClose,
   onSave,
 }: CountdownEditorModalProps) {
@@ -109,12 +105,6 @@ export function CountdownEditorModal({
   }, [draft, pickerField]);
 
   const setTheme = (themeId: ThemeId) => {
-    const theme = THEME_TEMPLATES.find(item => item.id === themeId);
-    if (theme?.isPro && !proUnlocked) {
-      onRequirePro();
-      return;
-    }
-
     setDraft(current => ({ ...current, themeId }));
   };
 
@@ -337,7 +327,6 @@ export function CountdownEditorModal({
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.themeList}>
               {THEME_TEMPLATES.map(theme => {
                 const isSelected = draft.themeId === theme.id;
-                const isLocked = theme.isPro && !proUnlocked;
                 return (
                   <Pressable
                     key={theme.id}
@@ -356,11 +345,6 @@ export function CountdownEditorModal({
                     <Text style={[styles.themeDescription, { color: theme.colors.textSecondary }]}>
                       {theme.description}
                     </Text>
-                    {theme.isPro ? (
-                      <Text style={[styles.proTag, { color: theme.colors.accent }]}>
-                        {isLocked ? 'PRO • Locked' : 'PRO'}
-                      </Text>
-                    ) : null}
                   </Pressable>
                 );
               })}
@@ -618,11 +602,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     fontWeight: '600',
-  },
-  proTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
   },
   separator: {
     height: 1,

@@ -187,7 +187,7 @@ function migrateAppState(rawState: unknown): AppState {
     ...fallback,
     ...next,
     schemaVersion: 4,
-    proUnlocked: typeof next.proUnlocked === 'boolean' ? next.proUnlocked : false,
+    proUnlocked: true,
     folders,
     countdowns: migratedCountdowns,
     settings: {

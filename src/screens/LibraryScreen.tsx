@@ -7,16 +7,12 @@ import { getThemeById } from '../domain/themes';
 
 interface LibraryScreenProps {
   palette: ResolvedPalette;
-  proUnlocked: boolean;
   onUsePreset: (preset: CountdownPreset) => void;
-  onRequirePro: () => void;
 }
 
 export function LibraryScreen({
   palette,
-  proUnlocked,
   onUsePreset,
-  onRequirePro,
 }: LibraryScreenProps) {
   return (
     <ScrollView
@@ -32,7 +28,6 @@ export function LibraryScreen({
       <View style={styles.grid}>
         {COUNTDOWN_PRESETS.map(preset => {
           const theme = getThemeById(preset.themeId);
-          const isLocked = theme.isPro && !proUnlocked;
           return (
             <Pressable
               key={preset.id}
@@ -44,14 +39,7 @@ export function LibraryScreen({
                   borderRadius: theme.borderRadius,
                 },
               ]}
-              onPress={() => {
-                if (isLocked) {
-                  onRequirePro();
-                  return;
-                }
-
-                onUsePreset(preset);
-              }}>
+              onPress={() => onUsePreset(preset)}>
               <View style={styles.presetTopRow}>
                 <Text style={styles.presetIcon}>{preset.icon}</Text>
                 <Text
@@ -75,12 +63,10 @@ export function LibraryScreen({
                 style={[
                   styles.useButton,
                   {
-                    backgroundColor: isLocked ? theme.colors.track : theme.colors.accent,
+                    backgroundColor: theme.colors.accent,
                   },
                 ]}>
-                <Text style={styles.useButtonText}>
-                  {isLocked ? 'Unlock PRO' : 'Use template'}
-                </Text>
+                <Text style={styles.useButtonText}>Use template</Text>
               </View>
             </Pressable>
           );

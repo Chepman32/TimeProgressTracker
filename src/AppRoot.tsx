@@ -4,7 +4,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppBackground } from './components/AppBackground';
 import { BottomTabBar } from './components/BottomTabBar';
 import { BackupRestoreModal } from './components/BackupRestoreModal';
-import { ProUnlockModal } from './components/ProUnlockModal';
 import { resolvePalette } from './domain/palette';
 import { UNASSIGNED_FOLDER_ID } from './domain/folders';
 import { AppTab, CountdownItem } from './domain/types';
@@ -45,7 +44,6 @@ export function AppRoot() {
   const [editorId, setEditorId] = useState<string | null>(null);
   const [editorInitialCountdown, setEditorInitialCountdown] = useState<CountdownItem | undefined>();
   const [isEditorOpen, setEditorOpen] = useState(false);
-  const [isProModalOpen, setProModalOpen] = useState(false);
   const [isBackupModalOpen, setBackupModalOpen] = useState(false);
   const [isNotificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [visualizeId, setVisualizeId] = useState<string | null>(null);
@@ -100,10 +98,6 @@ export function AppRoot() {
     );
   }
 
-  const requirePro = () => {
-    setProModalOpen(true);
-  };
-
   const openCreateModal = () => {
     setEditorId(null);
     setEditorInitialCountdown(undefined);
@@ -118,12 +112,6 @@ export function AppRoot() {
   };
 
   const onSaveCountdown = (item: CountdownItem): boolean => {
-    const theme = getThemeById(item.themeId);
-    if (theme.isPro && !state.proUnlocked) {
-      requirePro();
-      return false;
-    }
-
     const exists = sortedCountdowns.some(countdown => countdown.id === item.id);
     if (exists) {
       actions.updateCountdown(item);
@@ -247,15 +235,7 @@ export function AppRoot() {
               {activeTab === 'library' ? (
                 <LibraryScreen
                   palette={palette}
-                  proUnlocked={state.proUnlocked}
-                  onRequirePro={requirePro}
                   onUsePreset={preset => {
-                    const theme = getThemeById(preset.themeId);
-                    if (theme.isPro && !state.proUnlocked) {
-                      requirePro();
-                      return;
-                    }
-
                     const folderId = state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID;
                     const seeded = createCountdownFromPreset(preset, new Date(), folderId);
                     seeded.notifications = { ...state.settings.notificationDefaults };
@@ -278,7 +258,6 @@ export function AppRoot() {
               {activeTab === 'settings' ? (
                 <SettingsScreen
                   settings={state.settings}
-                  proUnlocked={state.proUnlocked}
                   notificationsEnabled={notificationsEnabled}
                   hasTrash={sortedCountdowns.some(item => Boolean(item.trashedAt))}
                   palette={palette}
@@ -287,7 +266,6 @@ export function AppRoot() {
                   onResetData={actions.resetState}
                   onCleanTrash={actions.cleanTrash}
                   onOpenBackup={() => setBackupModalOpen(true)}
-                  onOpenPro={requirePro}
                   onOpenNotifications={() => setNotificationsModalOpen(true)}
                   onRequestNotifications={onRequestNotifications}
                   onSendTestNotification={onSendTestNotification}
@@ -313,8 +291,6 @@ export function AppRoot() {
           defaultNotifications={state.settings.notificationDefaults}
           countdown={editingItem}
           initialCountdown={editorInitialCountdown}
-          proUnlocked={state.proUnlocked}
-          onRequirePro={requirePro}
           onClose={() => {
             setEditorOpen(false);
             setEditorId(null);
@@ -343,16 +319,6 @@ export function AppRoot() {
           onImportState={nextState => {
             actions.importState(nextState);
             setActiveTab('dashboard');
-          }}
-        />
-
-        <ProUnlockModal
-          visible={isProModalOpen}
-          palette={palette}
-          onClose={() => setProModalOpen(false)}
-          onUnlock={() => {
-            actions.setProUnlocked(true);
-            setProModalOpen(false);
           }}
         />
 

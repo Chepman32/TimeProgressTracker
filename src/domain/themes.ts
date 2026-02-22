@@ -22,7 +22,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
     id: 'grid',
     name: 'The Grid',
     description: 'Structured matrix with graphic contrast.',
-    isPro: true,
+    isPro: false,
     borderRadius: 18,
     colors: {
       appBackground: ['#0d1224', '#0e172f', '#171d38'],
@@ -39,7 +39,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
     id: 'aqua',
     name: 'Aqua',
     description: 'Floating gradients and luminous highlights.',
-    isPro: true,
+    isPro: false,
     borderRadius: 28,
     colors: {
       appBackground: ['#071226', '#123159', '#23618f'],
@@ -56,7 +56,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
     id: 'retro',
     name: 'Retro OS',
     description: 'Classic desktop-inspired style with nostalgia.',
-    isPro: true,
+    isPro: false,
     borderRadius: 14,
     colors: {
       appBackground: ['#0f3e8f', '#164a9d', '#245fc0'],
@@ -73,7 +73,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
     id: 'minimal',
     name: 'Minimal',
     description: 'Subtle grayscale with generous spacing.',
-    isPro: true,
+    isPro: false,
     borderRadius: 30,
     colors: {
       appBackground: ['#f5f6f7', '#f1f2f4', '#fbfbfc'],
@@ -90,7 +90,7 @@ export const THEME_TEMPLATES: ThemeTemplate[] = [
     id: 'neon',
     name: 'Neon Night',
     description: 'High-contrast futuristic glow.',
-    isPro: true,
+    isPro: false,
     borderRadius: 22,
     colors: {
       appBackground: ['#06050f', '#181434', '#23214e'],

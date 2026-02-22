@@ -7,7 +7,6 @@ import { ToggleRow } from '../components/ToggleRow';
 
 interface SettingsScreenProps {
   settings: AppSettings;
-  proUnlocked: boolean;
   notificationsEnabled: boolean;
   hasTrash: boolean;
   palette: ResolvedPalette;
@@ -16,7 +15,6 @@ interface SettingsScreenProps {
   onResetData: () => Promise<void>;
   onCleanTrash: () => void;
   onOpenBackup: () => void;
-  onOpenPro: () => void;
   onOpenNotifications: () => void;
   onRequestNotifications: () => void;
   onSendTestNotification: () => void;
@@ -30,7 +28,6 @@ const APPEARANCE_OPTIONS: Array<{ label: string; value: AppearanceMode }> = [
 
 export function SettingsScreen({
   settings,
-  proUnlocked,
   notificationsEnabled,
   hasTrash,
   palette,
@@ -39,7 +36,6 @@ export function SettingsScreen({
   onResetData,
   onCleanTrash,
   onOpenBackup,
-  onOpenPro,
   onOpenNotifications,
   onRequestNotifications,
   onSendTestNotification,
@@ -198,30 +194,6 @@ export function SettingsScreen({
         </Pressable>
       </View>
 
-      <View
-        style={[
-          styles.section,
-          {
-            backgroundColor: palette.floatingBackground,
-            borderColor: palette.border,
-          },
-        ]}>
-        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>PRO</Text>
-        <Text style={[styles.proLine, { color: palette.textPrimary }]}>
-          Status: {proUnlocked ? 'Unlocked' : 'Free'}
-        </Text>
-        <Text style={[styles.proLine, { color: palette.textSecondary }]}>• 6 visual templates</Text>
-        <Text style={[styles.proLine, { color: palette.textSecondary }]}>• Recurrent events and streak counters</Text>
-        <Text style={[styles.proLine, { color: palette.textSecondary }]}>• Notification rule presets</Text>
-        <Text style={[styles.proLine, { color: palette.textSecondary }]}>• iCloud/widget sync-ready data model</Text>
-        {!proUnlocked ? (
-          <Pressable
-            style={[styles.unlockButton, { backgroundColor: accentColor }]}
-            onPress={onOpenPro}>
-            <Text style={styles.unlockButtonText}>Unlock PRO</Text>
-          </Pressable>
-        ) : null}
-      </View>
     </ScrollView>
   );
 }
@@ -275,22 +247,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   resetText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  proLine: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-  },
-  unlockButton: {
-    marginTop: 4,
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  unlockButtonText: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },
