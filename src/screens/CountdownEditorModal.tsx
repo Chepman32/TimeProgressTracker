@@ -19,6 +19,7 @@ import { createBlankCountdown } from '../domain/factories';
 import {
   CountdownItem,
   CounterMode,
+  NotificationSettings,
   ProgressVisual,
   Recurrence,
   ThemeId,
@@ -34,6 +35,7 @@ interface CountdownEditorModalProps {
   visible: boolean;
   palette: ResolvedPalette;
   defaultFolderId: string;
+  defaultNotifications: NotificationSettings;
   countdown?: CountdownItem;
   proUnlocked: boolean;
   onRequirePro: () => void;
@@ -66,6 +68,7 @@ export function CountdownEditorModal({
   visible,
   palette,
   defaultFolderId,
+  defaultNotifications,
   countdown,
   proUnlocked,
   onRequirePro,
@@ -73,7 +76,9 @@ export function CountdownEditorModal({
   onSave,
 }: CountdownEditorModalProps) {
   const [draft, setDraft] = useState<CountdownItem>(() =>
-    countdown ? { ...countdown } : createBlankCountdown('swiss', defaultFolderId),
+    countdown
+      ? { ...countdown }
+      : createBlankCountdown('swiss', defaultFolderId, defaultNotifications),
   );
   const [pickerField, setPickerField] = useState<DateField | null>(null);
   const [isCalendarImportOpen, setCalendarImportOpen] = useState(false);
@@ -83,9 +88,13 @@ export function CountdownEditorModal({
       return;
     }
 
-    setDraft(countdown ? { ...countdown } : createBlankCountdown('swiss', defaultFolderId));
+    setDraft(
+      countdown
+        ? { ...countdown }
+        : createBlankCountdown('swiss', defaultFolderId, defaultNotifications),
+    );
     setPickerField(null);
-  }, [countdown, defaultFolderId, visible]);
+  }, [countdown, defaultFolderId, defaultNotifications, visible]);
 
   const activeDateValue = useMemo(() => {
     if (!pickerField) {

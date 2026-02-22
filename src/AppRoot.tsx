@@ -19,6 +19,7 @@ import {
   checkNotificationPermissions,
   clearAllNotificationBadges,
   fireDebugNotification,
+  getPendingNotificationRequestCount,
   requestNotificationPermissions,
   syncLocalNotifications,
 } from './lib/notifications';
@@ -30,6 +31,7 @@ import { OnboardingScreen } from './screens/OnboardingScreen';
 import { CountdownEditorModal } from './screens/CountdownEditorModal';
 import { CountdownDetailModal } from './screens/CountdownDetailModal';
 import { DotGridModal } from './screens/DotGridModal';
+import { NotificationsSettingsModal } from './screens/NotificationsSettingsModal';
 
 export function AppRoot() {
   const { isReady, state, actions } = useCountdownStore();
@@ -43,6 +45,7 @@ export function AppRoot() {
   const [isEditorOpen, setEditorOpen] = useState(false);
   const [isProModalOpen, setProModalOpen] = useState(false);
   const [isBackupModalOpen, setBackupModalOpen] = useState(false);
+  const [isNotificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [visualizeId, setVisualizeId] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
@@ -80,7 +83,7 @@ export function AppRoot() {
   }, [isReady]);
 
   useEffect(() => {
-    if (!isReady || !notificationsEnabled) {
+    if (!isReady) {
       return;
     }
 
@@ -124,6 +127,13 @@ export function AppRoot() {
     }
 
     actions.addCountdown(item);
+    requestNotificationPermissions()
+      .then(granted => {
+        setNotificationsEnabled(granted);
+      })
+      .catch(() => {
+        setNotificationsEnabled(false);
+      });
     return true;
   };
 
@@ -162,13 +172,39 @@ export function AppRoot() {
   };
 
   const onRequestNotifications = async () => {
-    const granted = await requestNotificationPermissions();
-    setNotificationsEnabled(granted);
-    if (granted) {
-      syncLocalNotifications(activeCountdowns);
-      Alert.alert('Notifications enabled', 'Countdown reminders are now active.');
-    } else {
-      Alert.alert('Notifications disabled', 'Enable notifications in iOS Settings for reminders.');
+    try {
+      const granted = await requestNotificationPermissions();
+      setNotificationsEnabled(granted);
+      if (granted) {
+        syncLocalNotifications(activeCountdowns);
+        Alert.alert('Notifications enabled', 'Countdown reminders are now active.');
+      } else {
+        Alert.alert('Notifications disabled', 'Enable notifications in iOS Settings for reminders.');
+      }
+    } catch {
+      setNotificationsEnabled(false);
+      Alert.alert('Notifications error', 'Could not update notification permissions right now.');
+    }
+  };
+
+  const onSendTestNotification = async () => {
+    try {
+      const granted = await requestNotificationPermissions();
+      setNotificationsEnabled(granted);
+
+      if (!granted) {
+        Alert.alert('Notifications disabled', 'Enable notifications in iOS Settings for reminders.');
+        return;
+      }
+
+      fireDebugNotification();
+      const pending = await getPendingNotificationRequestCount();
+      Alert.alert(
+        'Test notification scheduled',
+        `A local notification should appear in ~5 seconds. Pending requests: ${pending}.`,
+      );
+    } catch {
+      Alert.alert('Notifications error', 'Failed to schedule the test notification.');
     }
   };
 
@@ -245,8 +281,9 @@ export function AppRoot() {
                   onCleanTrash={actions.cleanTrash}
                   onOpenBackup={() => setBackupModalOpen(true)}
                   onOpenPro={requirePro}
+                  onOpenNotifications={() => setNotificationsModalOpen(true)}
                   onRequestNotifications={onRequestNotifications}
-                  onSendTestNotification={fireDebugNotification}
+                  onSendTestNotification={onSendTestNotification}
                 />
               ) : null}
             </View>
@@ -266,6 +303,7 @@ export function AppRoot() {
           visible={isEditorOpen}
           palette={palette}
           defaultFolderId={state.folders[0]?.id ?? UNASSIGNED_FOLDER_ID}
+          defaultNotifications={state.settings.notificationDefaults}
           countdown={editingItem}
           proUnlocked={state.proUnlocked}
           onRequirePro={requirePro}
@@ -315,6 +353,22 @@ export function AppRoot() {
           now={now}
           palette={palette}
           onClose={() => setVisualizeId(null)}
+        />
+
+        <NotificationsSettingsModal
+          visible={isNotificationsModalOpen}
+          palette={palette}
+          accentColor={accent}
+          notificationsEnabled={notificationsEnabled}
+          defaults={state.settings.notificationDefaults}
+          onUpdateDefaults={next =>
+            actions.updateSettings({
+              notificationDefaults: next,
+            })
+          }
+          onRequestNotifications={onRequestNotifications}
+          onSendTestNotification={onSendTestNotification}
+          onClose={() => setNotificationsModalOpen(false)}
         />
       </SafeAreaView>
     </AppBackground>

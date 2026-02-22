@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import PushNotificationIOS, {
   PushNotificationPermissions,
 } from '@react-native-community/push-notification-ios';
-import { addDays, addHours } from 'date-fns';
+import { addDays } from 'date-fns';
 import { CountdownItem } from '../domain/types';
 import { addRecurrence, getActiveWindow } from './date';
 
@@ -20,7 +20,7 @@ function buildRequestId(itemId: string, kind: string): string {
 }
 
 function isFutureDate(date: Date, now: Date): boolean {
-  return date.getTime() > now.getTime() + 10_000;
+  return date.getTime() > now.getTime() + 1_000;
 }
 
 function hasPermission(permissions: PushNotificationPermissions): boolean {
@@ -43,13 +43,20 @@ export async function requestNotificationPermissions(): Promise<boolean> {
     return false;
   }
 
-  const current = await checkNotificationPermissions();
-  if (hasPermission(current)) {
-    return true;
-  }
+  try {
+    const current = await checkNotificationPermissions();
+    if (hasPermission(current)) {
+      return true;
+    }
 
-  const requested = await PushNotificationIOS.requestPermissions();
-  return hasPermission(requested);
+    const requested = await PushNotificationIOS.requestPermissions();
+    return hasPermission(requested);
+  } catch {
+    // Some iOS environments throw "Push authorization request failed"
+    // even when local notification settings are already available.
+    const fallback = await checkNotificationPermissions();
+    return hasPermission(fallback);
+  }
 }
 
 function nextRecurringMilestone(item: CountdownItem, now: Date): Date | null {
@@ -176,9 +183,10 @@ export function syncLocalNotifications(countdowns: CountdownItem[]): void {
       title: request.title,
       body: request.body,
       fireDate: request.fireDate,
+      sound: 'default',
       isTimeZoneAgnostic: false,
       threadId: NOTIFICATION_THREAD_ID,
-      interruptionLevel: 'timeSensitive',
+      interruptionLevel: 'active',
     });
   });
 }
@@ -200,8 +208,22 @@ export function fireDebugNotification(): void {
     id: `debug-notification-${Date.now()}`,
     title: 'Pretty Progress',
     body: 'Notifications are enabled for this app.',
-    fireDate: addHours(new Date(), 1 / 60),
+    fireDate: new Date(Date.now() + 5_000),
+    sound: 'default',
     threadId: NOTIFICATION_THREAD_ID,
     interruptionLevel: 'active',
+  });
+}
+
+export function getPendingNotificationRequestCount(): Promise<number> {
+  return new Promise(resolve => {
+    if (Platform.OS !== 'ios') {
+      resolve(0);
+      return;
+    }
+
+    PushNotificationIOS.getPendingNotificationRequests(requests => {
+      resolve(Array.isArray(requests) ? requests.length : 0);
+    });
   });
 }

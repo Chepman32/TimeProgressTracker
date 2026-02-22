@@ -17,6 +17,7 @@ interface SettingsScreenProps {
   onCleanTrash: () => void;
   onOpenBackup: () => void;
   onOpenPro: () => void;
+  onOpenNotifications: () => void;
   onRequestNotifications: () => void;
   onSendTestNotification: () => void;
 }
@@ -39,6 +40,7 @@ export function SettingsScreen({
   onCleanTrash,
   onOpenBackup,
   onOpenPro,
+  onOpenNotifications,
   onRequestNotifications,
   onSendTestNotification,
 }: SettingsScreenProps) {
@@ -145,6 +147,13 @@ export function SettingsScreen({
           },
         ]}>
         <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Notifications</Text>
+        <Pressable
+          onPress={onOpenNotifications}
+          style={[styles.secondaryButton, { borderColor: palette.border }]}>
+          <Text style={[styles.secondaryButtonText, { color: palette.textPrimary }]}>
+            Open notifications settings
+          </Text>
+        </Pressable>
         <Pressable
           onPress={onRequestNotifications}
           style={[styles.secondaryButton, { borderColor: palette.border }]}>

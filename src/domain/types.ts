@@ -51,6 +51,7 @@ export interface AppSettings {
   weekStartsOnMonday: boolean;
   haptics: boolean;
   showArchivedByDefault: boolean;
+  notificationDefaults: NotificationSettings;
 }
 
 export interface AppState {

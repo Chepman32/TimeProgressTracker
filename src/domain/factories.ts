@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   haptics: true,
   showArchivedByDefault: false,
   weekStartsOnMonday: true,
+  notificationDefaults: { ...DEFAULT_NOTIFICATIONS },
 };
 
 const now = new Date();
@@ -64,6 +65,7 @@ export function createCountdownFromPreset(
 export function createBlankCountdown(
   themeId: ThemeId = 'swiss',
   folderId = UNASSIGNED_FOLDER_ID,
+  notificationDefaults: NotificationSettings = DEFAULT_NOTIFICATIONS,
 ): CountdownItem {
   const startDate = new Date();
   const targetDate = addDays(startDate, 30);
@@ -86,7 +88,7 @@ export function createBlankCountdown(
     previousFolderId: null,
     createdAt: toIso(startDate),
     updatedAt: toIso(startDate),
-    notifications: { ...DEFAULT_NOTIFICATIONS },
+    notifications: { ...notificationDefaults },
   };
 }
 
@@ -111,7 +113,7 @@ export function buildInitialCountdowns(): CountdownItem[] {
 
 export function buildInitialState(): AppState {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     onboardingCompleted: false,
     proUnlocked: false,
     settings: { ...DEFAULT_SETTINGS },

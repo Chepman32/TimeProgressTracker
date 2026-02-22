@@ -76,7 +76,11 @@ export function SegmentedControl<T extends string>({
             key={option.value}
             style={styles.segment}
             onPress={() => onChange(option.value)}>
-            <Text style={[styles.text, { color: isActive ? activeTextColor : textColor }]}>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
+              style={[styles.text, { color: isActive ? activeTextColor : textColor }]}>
               {option.label}
             </Text>
           </Pressable>
@@ -102,15 +106,16 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 3,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
   },
   text: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0,
+    textAlign: 'center',
   },
 });
