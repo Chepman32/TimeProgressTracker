@@ -5,6 +5,7 @@ import PushNotificationIOS, {
 import { addDays } from 'date-fns';
 import { CountdownItem } from '../domain/types';
 import { addRecurrence, getActiveWindow } from './date';
+import { DEFAULT_NOTIFICATIONS } from '../domain/factories';
 
 interface ScheduledRequest {
   id: string;
@@ -94,11 +95,30 @@ function requestsForCountdown(item: CountdownItem, now: Date): ScheduledRequest[
     return [];
   }
 
+  const notifications = {
+    weekBefore:
+      typeof item.notifications?.weekBefore === 'boolean'
+        ? item.notifications.weekBefore
+        : DEFAULT_NOTIFICATIONS.weekBefore,
+    dayBefore:
+      typeof item.notifications?.dayBefore === 'boolean'
+        ? item.notifications.dayBefore
+        : DEFAULT_NOTIFICATIONS.dayBefore,
+    atEnd:
+      typeof item.notifications?.atEnd === 'boolean'
+        ? item.notifications.atEnd
+        : DEFAULT_NOTIFICATIONS.atEnd,
+    repeatingMilestones:
+      typeof item.notifications?.repeatingMilestones === 'boolean'
+        ? item.notifications.repeatingMilestones
+        : DEFAULT_NOTIFICATIONS.repeatingMilestones,
+  };
+
   const requests: ScheduledRequest[] = [];
   const activeWindow = getActiveWindow(item, now);
 
   if (item.mode === 'countdown') {
-    if (item.notifications.weekBefore) {
+    if (notifications.weekBefore) {
       const fireDate = addDays(activeWindow.windowEnd, -7);
       if (isFutureDate(fireDate, now)) {
         requests.push({
@@ -110,7 +130,7 @@ function requestsForCountdown(item: CountdownItem, now: Date): ScheduledRequest[
       }
     }
 
-    if (item.notifications.dayBefore) {
+    if (notifications.dayBefore) {
       const fireDate = addDays(activeWindow.windowEnd, -1);
       if (isFutureDate(fireDate, now)) {
         requests.push({
@@ -122,7 +142,7 @@ function requestsForCountdown(item: CountdownItem, now: Date): ScheduledRequest[
       }
     }
 
-    if (item.notifications.atEnd && isFutureDate(activeWindow.windowEnd, now)) {
+    if (notifications.atEnd && isFutureDate(activeWindow.windowEnd, now)) {
       requests.push({
         id: buildRequestId(item.id, 'at-end'),
         title: `${item.icon} ${item.title}`,
@@ -131,7 +151,7 @@ function requestsForCountdown(item: CountdownItem, now: Date): ScheduledRequest[
       });
     }
   } else {
-    if (item.notifications.atEnd && isFutureDate(activeWindow.windowEnd, now)) {
+    if (notifications.atEnd && isFutureDate(activeWindow.windowEnd, now)) {
       requests.push({
         id: buildRequestId(item.id, 'target-hit'),
         title: `${item.icon} ${item.title}`,
@@ -141,7 +161,7 @@ function requestsForCountdown(item: CountdownItem, now: Date): ScheduledRequest[
     }
   }
 
-  if (item.notifications.repeatingMilestones) {
+  if (notifications.repeatingMilestones) {
     const milestoneDate = nextRecurringMilestone(item, now);
     if (milestoneDate && isFutureDate(milestoneDate, now)) {
       requests.push({

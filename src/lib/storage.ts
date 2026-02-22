@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { buildInitialState } from '../domain/factories';
+import { buildInitialState, DEFAULT_NOTIFICATIONS } from '../domain/factories';
 import { AppState, CountdownItem, ProjectFolder } from '../domain/types';
 import { LEGACY_DEFAULT_FOLDER_ID, UNASSIGNED_FOLDER_ID } from '../domain/folders';
 
@@ -107,6 +107,24 @@ function normalizeCountdowns(
       folderId: resolvedFolderId,
       trashedAt,
       previousFolderId,
+      notifications: {
+        weekBefore:
+          typeof typed.notifications?.weekBefore === 'boolean'
+            ? typed.notifications.weekBefore
+            : DEFAULT_NOTIFICATIONS.weekBefore,
+        dayBefore:
+          typeof typed.notifications?.dayBefore === 'boolean'
+            ? typed.notifications.dayBefore
+            : DEFAULT_NOTIFICATIONS.dayBefore,
+        atEnd:
+          typeof typed.notifications?.atEnd === 'boolean'
+            ? typed.notifications.atEnd
+            : DEFAULT_NOTIFICATIONS.atEnd,
+        repeatingMilestones:
+          typeof typed.notifications?.repeatingMilestones === 'boolean'
+            ? typed.notifications.repeatingMilestones
+            : DEFAULT_NOTIFICATIONS.repeatingMilestones,
+      },
     };
   });
 }
