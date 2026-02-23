@@ -7,12 +7,10 @@ import { ToggleRow } from '../components/ToggleRow';
 
 interface SettingsScreenProps {
   settings: AppSettings;
-  hasTrash: boolean;
   palette: ResolvedPalette;
   accentColor: string;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
   onResetData: () => Promise<void>;
-  onCleanTrash: () => void;
   onOpenBackup: () => void;
   onOpenNotifications: () => void;
 }
@@ -23,14 +21,23 @@ const APPEARANCE_OPTIONS: Array<{ label: string; value: AppearanceMode }> = [
   { label: 'Dark', value: 'dark' },
 ];
 
+const ACCENT_COLORS = [
+  '#20242f',
+  '#007AFF',
+  '#34C759',
+  '#ff9500de',
+  '#FF3B30',
+  '#AF52DE',
+  '#FF2D55',
+  '#5856D6',
+];
+
 export function SettingsScreen({
   settings,
-  hasTrash,
   palette,
   accentColor,
   onUpdateSettings,
   onResetData,
-  onCleanTrash,
   onOpenBackup,
   onOpenNotifications,
 }: SettingsScreenProps) {
@@ -47,21 +54,6 @@ export function SettingsScreen({
     ]);
   };
 
-  const onPressCleanTrash = () => {
-    if (!hasTrash) {
-      Alert.alert('Trash is empty');
-      return;
-    }
-
-    Alert.alert('Clean Trash?', 'All projects in Trash will be removed permanently.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Clean',
-        style: 'destructive',
-        onPress: onCleanTrash,
-      },
-    ]);
-  };
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -86,6 +78,21 @@ export function SettingsScreen({
           textColor={palette.textSecondary}
           activeTextColor="#ffffff"
         />
+        <View style={[styles.separator, { backgroundColor: palette.separator }]} />
+        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Accent Color</Text>
+        <View style={styles.swatchRow}>
+          {ACCENT_COLORS.map(color => (
+            <Pressable
+              key={color}
+              onPress={() => onUpdateSettings({ accentColor: color })}
+              style={[
+                styles.swatchWrapper,
+                { borderColor: settings.accentColor === color ? palette.textPrimary : 'transparent' },
+              ]}>
+              <View style={[styles.swatch, { backgroundColor: color }]} />
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View
@@ -163,11 +170,6 @@ export function SettingsScreen({
         </Pressable>
         <Pressable
           style={[styles.resetButton, { borderColor: palette.destructive }]}
-          onPress={onPressCleanTrash}>
-          <Text style={[styles.resetText, { color: palette.destructive }]}>Clean Trash</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.resetButton, { borderColor: palette.destructive }]}
           onPress={onPressReset}>
           <Text style={[styles.resetText, { color: palette.destructive }]}>Reset demo data</Text>
         </Pressable>
@@ -228,5 +230,24 @@ const styles = StyleSheet.create({
   resetText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  swatchRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  swatchWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2.5,
+    padding: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swatch: {
+    flex: 1,
+    width: '100%',
+    borderRadius: 16,
   },
 });

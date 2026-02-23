@@ -63,7 +63,7 @@ export function AppRoot() {
   );
 
   const baseTheme = getThemeById(activeCountdowns[0]?.themeId ?? sortedCountdowns[0]?.themeId ?? 'swiss');
-  const accent = baseTheme.colors.accent;
+  const accent = state.settings.accentColor;
 
   useEffect(() => {
     if (!isReady) {
@@ -273,12 +273,10 @@ export function AppRoot() {
                 <SettingsScreen
                   settings={state.settings}
                   notificationsEnabled={notificationsEnabled}
-                  hasTrash={sortedCountdowns.some(item => Boolean(item.trashedAt))}
                   palette={palette}
                   accentColor={accent}
                   onUpdateSettings={actions.updateSettings}
                   onResetData={actions.resetState}
-                  onCleanTrash={actions.cleanTrash}
                   onOpenBackup={() => setBackupModalOpen(true)}
                   onOpenNotifications={onOpenNotificationsScreen}
                 />

@@ -20,6 +20,7 @@ export const DEFAULT_NOTIFICATIONS: NotificationSettings = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   appearance: 'system',
+  accentColor: '#20242f',
   haptics: true,
   showArchivedByDefault: false,
   weekStartsOnMonday: true,

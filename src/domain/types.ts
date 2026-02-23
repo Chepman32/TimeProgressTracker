@@ -48,6 +48,7 @@ export interface ProjectFolder {
 
 export interface AppSettings {
   appearance: AppearanceMode;
+  accentColor: string;
   weekStartsOnMonday: boolean;
   haptics: boolean;
   showArchivedByDefault: boolean;
