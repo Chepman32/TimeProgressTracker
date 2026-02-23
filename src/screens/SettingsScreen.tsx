@@ -7,7 +7,6 @@ import { ToggleRow } from '../components/ToggleRow';
 
 interface SettingsScreenProps {
   settings: AppSettings;
-  notificationsEnabled: boolean;
   hasTrash: boolean;
   palette: ResolvedPalette;
   accentColor: string;
@@ -16,8 +15,6 @@ interface SettingsScreenProps {
   onCleanTrash: () => void;
   onOpenBackup: () => void;
   onOpenNotifications: () => void;
-  onRequestNotifications: () => void;
-  onSendTestNotification: () => void;
 }
 
 const APPEARANCE_OPTIONS: Array<{ label: string; value: AppearanceMode }> = [
@@ -28,7 +25,6 @@ const APPEARANCE_OPTIONS: Array<{ label: string; value: AppearanceMode }> = [
 
 export function SettingsScreen({
   settings,
-  notificationsEnabled,
   hasTrash,
   palette,
   accentColor,
@@ -37,8 +33,6 @@ export function SettingsScreen({
   onCleanTrash,
   onOpenBackup,
   onOpenNotifications,
-  onRequestNotifications,
-  onSendTestNotification,
 }: SettingsScreenProps) {
   const onPressReset = () => {
     Alert.alert('Reset all data?', 'This will restore demo countdowns and settings.', [
@@ -142,26 +136,11 @@ export function SettingsScreen({
             borderColor: palette.border,
           },
         ]}>
-        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Notifications</Text>
         <Pressable
           onPress={onOpenNotifications}
           style={[styles.secondaryButton, { borderColor: palette.border }]}>
-          <Text style={[styles.secondaryButtonText, { color: palette.textPrimary }]}>
-            Open notifications settings
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onRequestNotifications}
-          style={[styles.secondaryButton, { borderColor: palette.border }]}>
-          <Text style={[styles.secondaryButtonText, { color: palette.textPrimary }]}>
-            {notificationsEnabled ? 'Notifications Enabled' : 'Enable Notifications'}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onSendTestNotification}
-          style={[styles.secondaryButton, { borderColor: palette.border }]}>
-          <Text style={[styles.secondaryButtonText, { color: palette.textPrimary }]}>
-            Send test notification
+          <Text style={[styles.secondaryButtonText, { color: palette.textPrimary, fontSize: 17 }]}>
+            Notifications Settings
           </Text>
         </Pressable>
       </View>

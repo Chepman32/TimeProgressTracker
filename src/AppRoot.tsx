@@ -178,6 +178,24 @@ export function AppRoot() {
     }
   };
 
+  const onOpenNotificationsScreen = async () => {
+    if (!notificationsEnabled) {
+      try {
+        const granted = await requestNotificationPermissions();
+        setNotificationsEnabled(granted);
+        if (!granted) {
+          Alert.alert('Notifications disabled', 'Enable notifications in iOS Settings to use reminders.');
+          return;
+        }
+        syncLocalNotifications(activeCountdowns);
+      } catch {
+        Alert.alert('Notifications error', 'Could not request notification permissions right now.');
+        return;
+      }
+    }
+    setNotificationsModalOpen(true);
+  };
+
   const onSendTestNotification = async () => {
     try {
       const granted = await requestNotificationPermissions();
@@ -262,9 +280,7 @@ export function AppRoot() {
                   onResetData={actions.resetState}
                   onCleanTrash={actions.cleanTrash}
                   onOpenBackup={() => setBackupModalOpen(true)}
-                  onOpenNotifications={() => setNotificationsModalOpen(true)}
-                  onRequestNotifications={onRequestNotifications}
-                  onSendTestNotification={onSendTestNotification}
+                  onOpenNotifications={onOpenNotificationsScreen}
                 />
               ) : null}
             </View>
