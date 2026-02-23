@@ -8,7 +8,7 @@ import {
   AppSettings,
   ProjectFolder,
 } from '../domain/types';
-import { loadAppState, resetAppState, saveAppState } from '../lib/storage';
+import { loadAppState, markOnboardingCompleted, resetAppState, saveAppState } from '../lib/storage';
 import { createId } from '../lib/id';
 
 type Action =
@@ -293,7 +293,10 @@ export function useCountdownStore(): CountdownStore {
 
   const actions = useMemo(
     () => ({
-      completeOnboarding: () => dispatch({ type: 'complete_onboarding' }),
+      completeOnboarding: () => {
+        dispatch({ type: 'complete_onboarding' });
+        markOnboardingCompleted();
+      },
       setProUnlocked: (value: boolean) =>
         dispatch({ type: 'set_pro_unlocked', payload: { value } }),
       addCountdown: (item: CountdownItem) => dispatch({ type: 'create', payload: item }),

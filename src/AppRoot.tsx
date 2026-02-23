@@ -27,7 +27,6 @@ import { DashboardScreen } from './screens/DashboardScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { TimelineScreen } from './screens/TimelineScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
-import { OnboardingScreen } from './screens/OnboardingScreen';
 import { CountdownEditorModal } from './screens/CountdownEditorModal';
 import { CountdownDetailModal } from './screens/CountdownDetailModal';
 import { DotGridModal } from './screens/DotGridModal';
@@ -203,10 +202,7 @@ export function AppRoot() {
   return (
     <AppBackground colors={baseTheme.colors.appBackground} isDark={palette.isDark}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
-        {!state.onboardingCompleted ? (
-          <OnboardingScreen palette={palette} onFinish={actions.completeOnboarding} />
-        ) : (
-          <>
+        <>
             <View style={styles.screenArea}>
               {activeTab === 'dashboard' ? (
                 <DashboardScreen
@@ -282,7 +278,6 @@ export function AppRoot() {
               />
             </View>
           </>
-        )}
 
         <CountdownEditorModal
           visible={isEditorOpen}

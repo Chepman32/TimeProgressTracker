@@ -629,7 +629,7 @@ export function DashboardScreen({
         />
 
         <View style={styles.metricsRow}>
-          {periodProgress.map(progress => {
+          {periodProgress.map((progress, index) => {
             const percentage = Math.round(progress.progress * 100);
             const ringTrackColor = palette.isDark
               ? 'rgba(194, 204, 255, 0.2)'
@@ -656,6 +656,9 @@ export function DashboardScreen({
                     progress={progress.progress}
                     trackColor={ringTrackColor}
                     fillColor={ringFillColor}
+                    animateOnMount
+                    animationDelayMs={index * 90}
+                    animationDurationMs={850}
                   />
                 </View>
                 <Text style={[styles.metricValue, { color: palette.textPrimary }]}>

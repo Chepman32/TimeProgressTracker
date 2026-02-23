@@ -4,6 +4,28 @@ import { AppState, CountdownItem, ProjectFolder } from '../domain/types';
 import { LEGACY_DEFAULT_FOLDER_ID, UNASSIGNED_FOLDER_ID } from '../domain/folders';
 
 const STORAGE_KEY = '@time-progress-tracker/state-v1';
+const ONBOARDING_KEY = '@time-progress-tracker/onboarding-completed-v1';
+
+async function loadOnboardingCompleted(): Promise<boolean | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ONBOARDING_KEY);
+    if (raw === null) {
+      return null;
+    }
+
+    if (raw === 'true') {
+      return true;
+    }
+
+    if (raw === 'false') {
+      return false;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function isValidAppState(value: unknown): value is AppState {
   if (!value || typeof value !== 'object') {
@@ -198,22 +220,59 @@ function migrateAppState(rawState: unknown): AppState {
 }
 
 export async function loadAppState(): Promise<AppState> {
+  const persistedOnboardingCompleted = await loadOnboardingCompleted();
+
   try {
     const rawState = await AsyncStorage.getItem(STORAGE_KEY);
     if (!rawState) {
-      return buildInitialState();
+      const initial = buildInitialState();
+      if (persistedOnboardingCompleted === null) {
+        return initial;
+      }
+
+      return {
+        ...initial,
+        onboardingCompleted: persistedOnboardingCompleted,
+      };
     }
 
     const parsed = JSON.parse(rawState) as unknown;
-    return migrateAppState(parsed);
+    const migrated = migrateAppState(parsed);
+    if (persistedOnboardingCompleted === null) {
+      return migrated;
+    }
+
+    return {
+      ...migrated,
+      onboardingCompleted: persistedOnboardingCompleted,
+    };
   } catch {
-    return buildInitialState();
+    const initial = buildInitialState();
+    if (persistedOnboardingCompleted === null) {
+      return initial;
+    }
+
+    return {
+      ...initial,
+      onboardingCompleted: persistedOnboardingCompleted,
+    };
+  }
+}
+
+export async function markOnboardingCompleted(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+  } catch {
+    // ignore
   }
 }
 
 export async function saveAppState(state: AppState): Promise<void> {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)),
+      AsyncStorage.setItem(ONBOARDING_KEY, state.onboardingCompleted ? 'true' : 'false'),
+    ]);
   } catch {
     // Ignore persistence failures to keep the app interactive.
   }
